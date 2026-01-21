@@ -312,12 +312,18 @@ class LicenseDialog:
         dialog.title("🔐 Aventa HFT Pro 2026 - License Activation")
         dialog.geometry("700x650")
         dialog.resizable(False, False)
-        dialog.grab_set()
         
         # Make sure dialog is on top
         dialog.attributes('-topmost', True)
+        dialog.grab_set()
         
         # Center dialog on screen (not parent)
+        dialog.update_idletasks()
+        screen_width = dialog.winfo_screenwidth()
+        screen_height = dialog.winfo_screenheight()
+        x = (screen_width - 700) // 2
+        y = (screen_height - 650) // 2
+        dialog.geometry(f"+{x}+{y}")
         dialog.update_idletasks()
         screen_width = dialog.winfo_screenwidth()
         screen_height = dialog.winfo_screenheight()
@@ -468,25 +474,25 @@ class LicenseDialog:
         
         def activate():
             """Activate license with entered serial"""
-            serial = serial_entry.get().strip().upper()
-            
-            if not serial:
+            try:
+                serial = serial_entry.get().strip().upper()
+                
+                if not serial:
+                    status_label.config(
+                        text="❌ Please enter a serial number.",
+                        fg="#ff1744"
+                    )
+                    status_label.pack(anchor=tk.W)
+                    return
+                
+                # Try to activate
                 status_label.config(
-                    text="❌ Please enter a serial number.",
-                    fg="#ff1744"
+                    text="⏳ Activating...",
+                    fg="#00b0ff"
                 )
                 status_label.pack(anchor=tk.W)
-                return
-            
-            # Try to activate
-            status_label.config(
-                text="⏳ Activating...",
-                fg="#00b0ff"
-            )
-            status_label.pack(anchor=tk.W)
-            dialog.update()
-            
-            try:
+                dialog.update()
+                
                 license_data = self.license_manager.create_license(serial)
                 
                 if license_data.get("status") == "error":
@@ -506,7 +512,11 @@ class LicenseDialog:
                         "The application will now start."
                     )
                     self.result = True
-                    dialog.destroy()
+                    # Safely destroy dialog
+                    try:
+                        dialog.destroy()
+                    except:
+                        pass
                 else:
                     status_label.config(
                         text="❌ Failed to save license file.",
@@ -515,11 +525,14 @@ class LicenseDialog:
                     status_label.pack(anchor=tk.W)
             
             except Exception as e:
-                status_label.config(
-                    text=f"❌ Error: {str(e)}",
-                    fg="#ff1744"
-                )
-                status_label.pack(anchor=tk.W)
+                try:
+                    status_label.config(
+                        text=f"❌ Error: {str(e)}",
+                        fg="#ff1744"
+                    )
+                    status_label.pack(anchor=tk.W)
+                except:
+                    pass
         
         activate_btn = tk.Button(
             button_frame,
@@ -572,10 +585,11 @@ class LicenseDialog:
         # Update display
         dialog.update()
         
-        # Wait for dialog to close
+        # Wait for dialog to close (with error handling)
         try:
-            self.parent.wait_window(dialog)
-        except:
+            dialog.wait_window()
+        except Exception as e:
+            print(f"Dialog closed: {e}")
             pass
         
         return self.result if hasattr(self, 'result') and self.result else None
