@@ -18,7 +18,7 @@ class SerialGeneratorGUI:
         """Initialize the serial generator GUI"""
         self.root = root
         self.root.title("🔑 Aventa HFT Pro - Serial Number Generator")
-        self.root.geometry("700x600")
+        self.root.geometry("750x750")
         self.root.resizable(False, False)
         
         self.serial_generator = SerialKeyGenerator()
@@ -26,150 +26,405 @@ class SerialGeneratorGUI:
         
         self.setup_ui()
     
-    def setup_ui(self):
-        """Setup the user interface"""
-        # Style
+"""
+Serial Number Generator Tool for Aventa HFT Pro
+Admin tool to generate serial numbers for customers with expiry options
+"""
+
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
+from license_manager import SerialKeyGenerator, HardwareIDGenerator, LicenseManager
+
+
+class ModernStyle:
+    """Modern color scheme"""
+    # Primary colors
+    PRIMARY = "#2E86AB"      # Professional Blue
+    SECONDARY = "#A23B72"    # Purple accent
+    SUCCESS = "#06A77D"      # Green
+    ACCENT = "#F18F01"       # Orange accent
+    
+    # Background colors
+    BG_DARK = "#1A1F36"      # Dark background
+    BG_LIGHT = "#F5F7FA"     # Light background
+    BG_CARD = "#FFFFFF"      # Card background
+    
+    # Text colors
+    TEXT_PRIMARY = "#2D3436"  # Dark text
+    TEXT_SECONDARY = "#636E72" # Gray text
+    TEXT_LIGHT = "#FFFFFF"    # Light text
+    
+    # Borders
+    BORDER = "#DFE6E9"        # Light border
+
+
+class SerialGeneratorGUI:
+    """GUI tool for generating serial numbers"""
+    
+    def __init__(self, root):
+        """Initialize the serial generator GUI"""
+        self.root = root
+        self.root.title("🔑 Aventa HFT Pro - Serial Number Generator")
+        self.root.geometry("700x650")
+        self.root.resizable(False, False)
+        self.root.configure(bg=ModernStyle.BG_LIGHT)
+        
+        self.serial_generator = SerialKeyGenerator()
+        self.hardware_generator = HardwareIDGenerator()
+        
+        self.setup_styles()
+        self.setup_ui()
+    
+    def setup_styles(self):
+        """Setup modern styles"""
         style = ttk.Style()
         style.theme_use('clam')
         
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="15")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Configure colors
+        style.configure("TFrame", background=ModernStyle.BG_LIGHT)
+        style.configure("TLabel", background=ModernStyle.BG_LIGHT, foreground=ModernStyle.TEXT_PRIMARY)
+        style.configure("Title.TLabel", font=("Segoe UI", 20, "bold"), foreground=ModernStyle.PRIMARY)
+        style.configure("Heading.TLabel", font=("Segoe UI", 12, "bold"), foreground=ModernStyle.PRIMARY)
         
-        # Title
-        title_label = ttk.Label(
-            main_frame,
-            text="Serial Number Generator",
-            font=("Arial", 16, "bold")
+        # Labelframe with rounded appearance
+        style.configure("TLabelframe", background=ModernStyle.BG_LIGHT, bordercolor=ModernStyle.BORDER)
+        style.configure("TLabelframe.Label", background=ModernStyle.BG_LIGHT, foreground=ModernStyle.PRIMARY, font=("Segoe UI", 11, "bold"))
+        
+        # Button styles
+        style.configure("Accent.TButton", font=("Segoe UI", 10, "bold"), padding=8)
+        style.map("Accent.TButton", background=[("active", ModernStyle.SECONDARY)])
+        
+        # Entry style
+        style.configure("TEntry", padding=6, fieldbackground=ModernStyle.BG_CARD)
+        
+    def setup_ui(self):
+        """Setup the user interface with scrollbar"""
+        # Create main container with scrollbar
+        container = tk.Frame(self.root, bg=ModernStyle.BG_LIGHT)
+        container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Create canvas for scrolling
+        canvas = tk.Canvas(container, bg=ModernStyle.BG_LIGHT, highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Create scrollbar with modern styling
+        scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=canvas.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Configure canvas
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Create frame inside canvas
+        main_frame = tk.Frame(canvas, bg=ModernStyle.BG_LIGHT)
+        canvas.create_window((0, 0), window=main_frame, anchor=tk.NW)
+        
+        # Add padding
+        main_frame.configure(padx=12, pady=12)
+        
+        # Header
+        header_frame = tk.Frame(main_frame, bg=ModernStyle.PRIMARY, height=50)
+        header_frame.pack(fill=tk.X, pady=(0, 10), ipady=8, expand=False)
+        
+        title_label = tk.Label(
+            header_frame,
+            text="🔑 Serial Number Generator",
+            font=("Segoe UI", 14, "bold"),
+            bg=ModernStyle.PRIMARY,
+            fg=ModernStyle.TEXT_LIGHT
         )
-        title_label.pack(pady=(0, 20))
+        title_label.pack(side=tk.LEFT, padx=12, pady=5)
         
-        # Input section
-        input_frame = ttk.LabelFrame(main_frame, text="Customer Hardware ID", padding="10")
-        input_frame.pack(fill=tk.X, pady=(0, 15))
+        # Input section - CUSTOM FRAME
+        input_frame = tk.Frame(main_frame, bg=ModernStyle.BG_CARD, relief=tk.FLAT, bd=1)
+        input_frame.pack(fill=tk.X, pady=8)
+        input_frame.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
         
-        ttk.Label(input_frame, text="Enter Hardware ID:").pack(anchor=tk.W)
+        # Section title
+        input_title = tk.Label(
+            input_frame,
+            text="Customer Hardware ID",
+            font=("Segoe UI", 10, "bold"),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.PRIMARY
+        )
+        input_title.pack(anchor=tk.W, padx=10, pady=(8, 5))
         
-        self.hardware_id_entry = ttk.Entry(input_frame, width=60, font=("Courier", 10))
-        self.hardware_id_entry.pack(fill=tk.X, pady=(5, 0))
+        # Input label and field
+        input_label = tk.Label(
+            input_frame,
+            text="Enter Hardware ID:",
+            font=("Segoe UI", 9),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY
+        )
+        input_label.pack(anchor=tk.W, padx=10)
         
-        ttk.Label(
+        self.hardware_id_entry = tk.Entry(
+            input_frame,
+            width=50,
+            font=("Courier", 9),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
+        self.hardware_id_entry.pack(fill=tk.X, padx=10, pady=(3, 5))
+        self.hardware_id_entry.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
+        
+        hint_label = tk.Label(
             input_frame,
             text="(Customer should get this from their system)",
-            font=("Arial", 9),
-            foreground="gray"
-        ).pack(anchor=tk.W)
+            font=("Segoe UI", 8),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_SECONDARY
+        )
+        hint_label.pack(anchor=tk.W, padx=10, pady=(0, 8))
         
         # OR section
-        or_frame = ttk.Frame(main_frame)
-        or_frame.pack(fill=tk.X, pady=15)
+        or_frame = tk.Frame(main_frame, bg=ModernStyle.BG_LIGHT)
+        or_frame.pack(fill=tk.X, pady=6)
         
-        ttk.Separator(or_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 5))
-        ttk.Label(or_frame, text="OR", justify=tk.CENTER).pack()
-        ttk.Separator(or_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(5, 0))
+        ttk.Separator(or_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 2))
+        or_label = tk.Label(or_frame, text="OR", font=("Segoe UI", 9), bg=ModernStyle.BG_LIGHT, fg=ModernStyle.TEXT_SECONDARY)
+        or_label.pack()
+        ttk.Separator(or_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(2, 0))
         
         # Auto-generate section
-        auto_frame = ttk.LabelFrame(main_frame, text="Auto-Generate (for Testing)", padding="10")
-        auto_frame.pack(fill=tk.X, pady=(0, 15))
+        auto_frame = tk.Frame(main_frame, bg=ModernStyle.BG_CARD, relief=tk.FLAT, bd=1)
+        auto_frame.pack(fill=tk.X, pady=8)
+        auto_frame.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
         
-        ttk.Button(
+        auto_title = tk.Label(
             auto_frame,
-            text="Generate Test Hardware ID",
-            command=self.generate_test_hardware_id
-        ).pack()
+            text="Auto-Generate (for Testing)",
+            font=("Segoe UI", 10, "bold"),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.PRIMARY
+        )
+        auto_title.pack(anchor=tk.W, padx=10, pady=(8, 6))
+        
+        auto_button = tk.Button(
+            auto_frame,
+            text="🎲 Generate Test Hardware ID",
+            command=self.generate_test_hardware_id,
+            bg=ModernStyle.PRIMARY,
+            fg=ModernStyle.TEXT_LIGHT,
+            font=("Segoe UI", 9, "bold"),
+            relief=tk.FLAT,
+            padx=10,
+            pady=6,
+            cursor="hand2"
+        )
+        auto_button.pack(padx=10, pady=(0, 8))
         
         # Output section
-        output_frame = ttk.LabelFrame(main_frame, text="Generated Serial Number", padding="10")
-        output_frame.pack(fill=tk.X, pady=(0, 15))
+        output_frame = tk.Frame(main_frame, bg=ModernStyle.BG_CARD, relief=tk.FLAT, bd=1)
+        output_frame.pack(fill=tk.X, pady=8)
+        output_frame.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
+        
+        output_title = tk.Label(
+            output_frame,
+            text="Generated Serial Number",
+            font=("Segoe UI", 10, "bold"),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.PRIMARY
+        )
+        output_title.pack(anchor=tk.W, padx=10, pady=(8, 6))
         
         self.serial_display = tk.Text(
             output_frame,
             height=3,
-            width=60,
-            font=("Courier", 12, "bold"),
-            fg="#4CAF50",
-            bg="#f5f5f5"
+            width=50,
+            font=("Courier", 10, "bold"),
+            fg=ModernStyle.SUCCESS,
+            bg="#F0F8F4",
+            relief=tk.FLAT,
+            bd=0
         )
-        self.serial_display.pack(fill=tk.X, pady=(0, 5))
+        self.serial_display.pack(fill=tk.X, padx=10, pady=6)
         
         # License Type section
-        license_frame = ttk.LabelFrame(main_frame, text="License Type", padding="10")
-        license_frame.pack(fill=tk.X, pady=(0, 15))
+        license_frame = tk.Frame(main_frame, bg=ModernStyle.BG_CARD, relief=tk.FLAT, bd=1)
+        license_frame.pack(fill=tk.X, pady=8)
+        license_frame.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
+        
+        license_title = tk.Label(
+            license_frame,
+            text="License Type",
+            font=("Segoe UI", 10, "bold"),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.PRIMARY
+        )
+        license_title.pack(anchor=tk.W, padx=10, pady=(8, 5))
         
         self.license_type_var = tk.StringVar(value="unlimited")
         
-        ttk.Radiobutton(
-            license_frame,
+        # Radio buttons dengan custom styling
+        radio_frame = tk.Frame(license_frame, bg=ModernStyle.BG_CARD)
+        radio_frame.pack(anchor=tk.W, padx=10, pady=3)
+        
+        radio1 = tk.Radiobutton(
+            radio_frame,
             text="🔓 Unlimited (No expiry)",
             variable=self.license_type_var,
-            value="unlimited"
-        ).pack(anchor=tk.W, pady=5)
+            value="unlimited",
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=("Segoe UI", 9),
+            cursor="hand2",
+            selectcolor=ModernStyle.BG_CARD
+        )
+        radio1.pack(anchor=tk.W, pady=2)
         
-        ttk.Radiobutton(
-            license_frame,
+        radio2 = tk.Radiobutton(
+            radio_frame,
             text="⏱️ Trial 7 Days (auto expire)",
             variable=self.license_type_var,
-            value="trial"
-        ).pack(anchor=tk.W, pady=5)
+            value="trial",
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=("Segoe UI", 9),
+            cursor="hand2",
+            selectcolor=ModernStyle.BG_CARD
+        )
+        radio2.pack(anchor=tk.W, pady=2)
         
-        ttk.Radiobutton(
-            license_frame,
+        radio3 = tk.Radiobutton(
+            radio_frame,
             text="📅 Custom Days",
             variable=self.license_type_var,
-            value="custom"
-        ).pack(anchor=tk.W, pady=5)
+            value="custom",
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY,
+            font=("Segoe UI", 9),
+            cursor="hand2",
+            selectcolor=ModernStyle.BG_CARD
+        )
+        radio3.pack(anchor=tk.W, pady=2)
         
-        custom_days_frame = ttk.Frame(license_frame)
-        custom_days_frame.pack(anchor=tk.W, pady=5, padx=(20, 0))
+        custom_days_frame = tk.Frame(license_frame, bg=ModernStyle.BG_CARD)
+        custom_days_frame.pack(anchor=tk.W, padx=30, pady=(3, 8))
         
-        ttk.Label(custom_days_frame, text="Number of days:").pack(side=tk.LEFT, padx=(0, 5))
-        self.custom_days_entry = ttk.Entry(custom_days_frame, width=10)
+        custom_label = tk.Label(
+            custom_days_frame,
+            text="Number of days:",
+            font=("Segoe UI", 9),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY
+        )
+        custom_label.pack(side=tk.LEFT, padx=(0, 8))
+        
+        self.custom_days_entry = tk.Entry(
+            custom_days_frame,
+            width=8,
+            font=("Segoe UI", 9),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=1
+        )
         self.custom_days_entry.pack(side=tk.LEFT)
         self.custom_days_entry.insert(0, "30")
+        self.custom_days_entry.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
         
         # Buttons
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill=tk.X, pady=(0, 15))
+        button_frame = tk.Frame(main_frame, bg=ModernStyle.BG_LIGHT)
+        button_frame.pack(fill=tk.X, pady=8)
         
-        ttk.Button(
+        generate_btn = tk.Button(
             button_frame,
-            text="Generate Serial",
-            command=self.generate_serial
-        ).pack(side=tk.LEFT, padx=(0, 5))
+            text="✨ Generate Serial",
+            command=self.generate_serial,
+            bg=ModernStyle.SUCCESS,
+            fg=ModernStyle.TEXT_LIGHT,
+            font=("Segoe UI", 10, "bold"),
+            relief=tk.FLAT,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        generate_btn.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(
+        copy_btn = tk.Button(
             button_frame,
-            text="Copy Serial",
-            command=self.copy_serial
-        ).pack(side=tk.LEFT, padx=5)
+            text="📋 Copy Serial",
+            command=self.copy_serial,
+            bg=ModernStyle.PRIMARY,
+            fg=ModernStyle.TEXT_LIGHT,
+            font=("Segoe UI", 10, "bold"),
+            relief=tk.FLAT,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        copy_btn.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(
+        clear_btn = tk.Button(
             button_frame,
-            text="Clear",
-            command=self.clear_all
-        ).pack(side=tk.LEFT, padx=5)
+            text="🔄 Clear",
+            command=self.clear_all,
+            bg=ModernStyle.ACCENT,
+            fg=ModernStyle.TEXT_LIGHT,
+            font=("Segoe UI", 10, "bold"),
+            relief=tk.FLAT,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        clear_btn.pack(side=tk.LEFT, padx=5)
         
         # Log section
-        log_frame = ttk.LabelFrame(main_frame, text="Generation Log", padding="5")
-        log_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame,
-            height=8,
-            width=70,
-            font=("Courier", 9)
+        log_title = tk.Label(
+            main_frame,
+            text="Generation Log",
+            font=("Segoe UI", 10, "bold"),
+            bg=ModernStyle.BG_LIGHT,
+            fg=ModernStyle.PRIMARY
         )
-        self.log_text.pack(fill=tk.BOTH, expand=True)
+        log_title.pack(anchor=tk.W, pady=(8, 6))
+        
+        log_frame = tk.Frame(main_frame, bg=ModernStyle.BG_CARD, relief=tk.FLAT, bd=1)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 8))
+        log_frame.configure(highlightbackground=ModernStyle.BORDER, highlightthickness=1)
+        
+        self.log_text = tk.Text(
+            log_frame,
+            height=6,
+            width=60,
+            font=("Courier", 8),
+            bg=ModernStyle.BG_CARD,
+            fg=ModernStyle.TEXT_PRIMARY,
+            relief=tk.FLAT,
+            bd=0
+        )
+        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Log scrollbar
+        log_scrollbar = ttk.Scrollbar(log_frame, orient=tk.VERTICAL, command=self.log_text.yview)
+        log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.log_text.configure(yscrollcommand=log_scrollbar.set)
         
         # Initial log
         self.log("Serial Number Generator Started")
         self.log("=" * 60)
         self.log("Instructions:")
         self.log("1. Customer provides their Hardware ID from their system")
-        self.log("2. Enter the Hardware ID and click 'Generate Serial'")
-        self.log("3. Send the serial number to the customer")
-        self.log("4. Serial can only be activated on that specific computer")
+        self.log("2. Enter the Hardware ID and select License Type")
+        self.log("3. Click 'Generate Serial'")
+        self.log("4. Send the serial number to the customer")
         self.log("=" * 60)
+        
+        # Update canvas scroll region
+        main_frame.update_idletasks()
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        # Mousewheel scrolling
+        canvas.bind_all("<MouseWheel>", lambda event: canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        canvas.bind_all("<Button-4>", lambda event: canvas.yview_scroll(-1, "units"))
+        canvas.bind_all("<Button-5>", lambda event: canvas.yview_scroll(1, "units"))
     
     def generate_test_hardware_id(self):
         """Generate a test hardware ID"""
