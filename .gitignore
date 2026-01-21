@@ -26,3 +26,5 @@ Backtest/
 .xlsx
 .db
 .backup
+serial_generator.py 
+test_modern_ui.py
