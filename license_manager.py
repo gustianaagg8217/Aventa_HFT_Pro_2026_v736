@@ -301,108 +301,301 @@ class LicenseDialog:
         self.result = None
     
     def show_activation_dialog(self) -> bool:
-        """Show license activation dialog"""
+        """Show license activation dialog with detailed instructions"""
         import tkinter as tk
-        from tkinter import messagebox, simpledialog
+        from tkinter import messagebox, scrolledtext
         
         hardware_id = self.license_manager.get_hardware_id()
         
-        # Create dialog window
+        # Create dialog window - larger for better visibility
         dialog = tk.Toplevel(self.parent)
-        dialog.title("🔐 Aventa HFT Pro - License Activation")
-        dialog.geometry("500x400")
+        dialog.title("🔐 Aventa HFT Pro 2026 - License Activation")
+        dialog.geometry("700x650")
         dialog.resizable(False, False)
         dialog.grab_set()
         
         # Center on parent
         dialog.transient(self.parent)
         
-        # Main frame
-        import tkinter.font as tkFont
-        main_frame = tk.Frame(dialog, bg="#f0f0f0", padx=20, pady=20)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Configure colors
+        dialog.configure(bg="#f5f5f5")
         
-        # Title
-        title_font = tkFont.Font(family="Arial", size=14, weight="bold")
+        # Main frame with padding
+        main_frame = tk.Frame(dialog, bg="#f5f5f5")
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # ===== HEADER SECTION =====
+        header_frame = tk.Frame(main_frame, bg="#2196F3")
+        header_frame.pack(fill=tk.X, pady=(0, 20), ipady=10)
+        
         title_label = tk.Label(
-            main_frame,
-            text="License Activation",
-            font=title_font,
-            bg="#f0f0f0",
-            fg="#333"
+            header_frame,
+            text="🔐 LICENSE ACTIVATION REQUIRED",
+            font=("Arial", 14, "bold"),
+            bg="#2196F3",
+            fg="white"
         )
-        title_label.pack(pady=(0, 10))
+        title_label.pack(pady=5)
         
-        # Hardware ID display
-        hw_frame = tk.LabelFrame(main_frame, text="Hardware ID (Unique to this PC)", 
-                                  bg="#f0f0f0", padx=10, pady=10)
+        subtitle_label = tk.Label(
+            header_frame,
+            text="This software requires a valid license to run",
+            font=("Arial", 10),
+            bg="#2196F3",
+            fg="#e0e0e0"
+        )
+        subtitle_label.pack()
+        
+        # ===== INSTRUCTIONS SECTION =====
+        instructions_frame = tk.LabelFrame(
+            main_frame,
+            text="📋 Instructions",
+            font=("Arial", 10, "bold"),
+            bg="#ffffff",
+            padx=15,
+            pady=10
+        )
+        instructions_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        instructions_text = tk.Label(
+            instructions_frame,
+            text=(
+                "1. Copy your Hardware ID (shown below)\n"
+                "2. Run serial_generator.py to generate a serial number\n"
+                "3. Paste the serial number in the field below\n"
+                "4. Click 'Activate' to complete activation"
+            ),
+            font=("Arial", 9),
+            bg="#ffffff",
+            fg="#333",
+            justify=tk.LEFT
+        )
+        instructions_text.pack(anchor=tk.W, fill=tk.X)
+        
+        # ===== HARDWARE ID SECTION =====
+        hw_frame = tk.LabelFrame(
+            main_frame,
+            text="🔧 Hardware ID (Unique to this PC)",
+            font=("Arial", 10, "bold"),
+            bg="#ffffff",
+            padx=15,
+            pady=10
+        )
         hw_frame.pack(fill=tk.X, pady=(0, 15))
         
-        hw_text = tk.Text(hw_frame, height=2, width=50, wrap=tk.WORD)
+        # Hardware ID display (read-only text widget for easy selection)
+        hw_text = tk.Text(hw_frame, height=2, width=80, font=("Courier", 10))
+        hw_text.pack(fill=tk.BOTH, expand=True)
         hw_text.insert(1.0, hardware_id)
-        hw_text.config(state=tk.DISABLED)
-        hw_text.pack()
+        hw_text.config(state=tk.DISABLED, bg="#f0f0f0")
         
-        # Serial input
-        serial_frame = tk.LabelFrame(main_frame, text="Enter Serial Number", 
-                                      bg="#f0f0f0", padx=10, pady=10)
+        # Copy button
+        copy_frame = tk.Frame(hw_frame, bg="#ffffff")
+        copy_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        def copy_hw_id():
+            dialog.clipboard_clear()
+            dialog.clipboard_append(hardware_id)
+            messagebox.showinfo("Copied", "Hardware ID copied to clipboard!")
+        
+        copy_btn = tk.Button(
+            copy_frame,
+            text="📋 Copy Hardware ID",
+            command=copy_hw_id,
+            bg="#4CAF50",
+            fg="white",
+            padx=15,
+            pady=5,
+            font=("Arial", 9)
+        )
+        copy_btn.pack(side=tk.LEFT)
+        
+        # ===== SERIAL NUMBER INPUT SECTION =====
+        serial_frame = tk.LabelFrame(
+            main_frame,
+            text="🔐 Enter Serial Number",
+            font=("Arial", 10, "bold"),
+            bg="#ffffff",
+            padx=15,
+            pady=10
+        )
         serial_frame.pack(fill=tk.X, pady=(0, 15))
         
-        serial_entry = tk.Entry(serial_frame, font=("Arial", 12))
-        serial_entry.pack(fill=tk.X)
+        hint_label = tk.Label(
+            serial_frame,
+            text="Format: AV-XXXX-XXXX-XXXX-XXXX",
+            font=("Arial", 8),
+            bg="#ffffff",
+            fg="#999"
+        )
+        hint_label.pack(anchor=tk.W, pady=(0, 5))
         
-        # Button frame
-        button_frame = tk.Frame(main_frame, bg="#f0f0f0")
-        button_frame.pack(fill=tk.X, pady=(15, 0))
+        serial_entry = tk.Entry(
+            serial_frame,
+            font=("Arial", 12, "bold"),
+            bg="#ffffff",
+            fg="#333",
+            relief=tk.FLAT,
+            bd=2
+        )
+        serial_entry.pack(fill=tk.X, pady=(0, 10))
+        serial_entry.focus()
+        
+        # Status label
+        status_label = tk.Label(
+            serial_frame,
+            text="",
+            font=("Arial", 9),
+            bg="#ffffff",
+            fg="#d32f2f"
+        )
+        status_label.pack(anchor=tk.W)
+        
+        # ===== BUTTON SECTION =====
+        button_frame = tk.Frame(main_frame, bg="#f5f5f5")
+        button_frame.pack(fill=tk.X, pady=(10, 0))
         
         def activate():
+            """Activate license with entered serial"""
             serial = serial_entry.get().strip().upper()
+            
             if not serial:
-                messagebox.showerror("Error", "Please enter a serial number")
-                return
-            
-            license_data = self.license_manager.create_license(serial)
-            
-            if license_data.get("status") == "error":
-                messagebox.showerror("Activation Failed", license_data.get("message"))
-                return
-            
-            # Save license
-            if self.license_manager.save_license(license_data):
-                messagebox.showinfo(
-                    "Success",
-                    "License activated successfully!\n\n"
-                    "This serial number is now bound to this computer."
+                status_label.config(
+                    text="❌ Error: Please enter a serial number",
+                    fg="#d32f2f"
                 )
-                self.result = True
-                dialog.destroy()
-            else:
-                messagebox.showerror("Error", "Failed to save license")
+                status_label.pack(anchor=tk.W)
+                return
+            
+            # Try to activate
+            status_label.config(
+                text="⏳ Activating...",
+                fg="#2196F3"
+            )
+            status_label.pack(anchor=tk.W)
+            dialog.update()
+            
+            try:
+                license_data = self.license_manager.create_license(serial)
+                
+                if license_data.get("status") == "error":
+                    status_label.config(
+                        text=f"❌ Activation Failed: {license_data.get('message')}",
+                        fg="#d32f2f"
+                    )
+                    status_label.pack(anchor=tk.W)
+                    return
+                
+                # Save license
+                if self.license_manager.save_license(license_data):
+                    messagebox.showinfo(
+                        "✅ Success",
+                        "License activated successfully!\n\n"
+                        "This serial number is now bound to this computer.\n"
+                        "The application will now start."
+                    )
+                    self.result = True
+                    dialog.destroy()
+                else:
+                    status_label.config(
+                        text="❌ Error: Failed to save license",
+                        fg="#d32f2f"
+                    )
+                    status_label.pack(anchor=tk.W)
+            
+            except Exception as e:
+                status_label.config(
+                    text=f"❌ Error: {str(e)}",
+                    fg="#d32f2f"
+                )
+                status_label.pack(anchor=tk.W)
         
         activate_btn = tk.Button(
             button_frame,
-            text="Activate",
+            text="✅ Activate License",
             command=activate,
             bg="#4CAF50",
             fg="white",
-            padx=20,
-            pady=10
+            padx=30,
+            pady=12,
+            font=("Arial", 10, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2"
         )
         activate_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         cancel_btn = tk.Button(
             button_frame,
-            text="Cancel",
+            text="❌ Cancel",
             command=lambda: dialog.destroy(),
             bg="#f44336",
             fg="white",
-            padx=20,
-            pady=10
+            padx=30,
+            pady=12,
+            font=("Arial", 10, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2"
         )
         cancel_btn.pack(side=tk.LEFT)
         
+        # Help button
+        help_btn = tk.Button(
+            button_frame,
+            text="❓ Need Help?",
+            command=self._show_help,
+            bg="#FF9800",
+            fg="white",
+            padx=20,
+            pady=12,
+            font=("Arial", 10, "bold"),
+            relief=tk.FLAT,
+            cursor="hand2"
+        )
+        help_btn.pack(side=tk.RIGHT)
+        
+        # Set minimum size and focus
+        dialog.minsize(600, 500)
+        serial_entry.focus()
+        
         self.parent.wait_window(dialog)
-        return self.result
+        return self.result if hasattr(self, 'result') and self.result else None
+    
+    def _show_help(self):
+        """Show help dialog"""
+        from tkinter import messagebox
+        
+        help_text = """
+🔐 AVENTA HFT PRO 2026 - LICENSE ACTIVATION HELP
+
+📋 STEPS:
+1. Copy the Hardware ID shown above
+2. Open serial_generator.py
+3. Paste the Hardware ID into the generator
+4. Generate a serial number
+5. Copy the generated serial
+6. Paste it here and click Activate
+
+❓ WHAT IS HARDWARE ID?
+- Unique identifier for your computer
+- Binds the license to this specific PC
+- Cannot be reused on other computers
+
+✅ NEED A SERIAL?
+Run: python serial_generator.py
+- Paste Hardware ID
+- Click "Generate Serial"
+- Copy the result
+
+⚠️ ISSUES?
+- Ensure Hardware ID is copied correctly
+- Check serial format: AV-XXXX-XXXX-XXXX-XXXX
+- Contact support if problems persist
+
+📧 Support: support@aventa.com
+        """
+        
+        messagebox.showinfo("License Activation Help", help_text)
+
     
     def show_license_info(self):
         """Show current license information"""

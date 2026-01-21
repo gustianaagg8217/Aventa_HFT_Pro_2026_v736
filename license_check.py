@@ -83,9 +83,10 @@ class LicenseCheckWindow:
     def show_splash_screen(self):
         """Show splash screen during license check"""
         self.window = tk.Tk()
-        self.window.title("Aventa HFT Pro 2026")
-        self.window.geometry("400x200")
+        self.window.title("Aventa HFT Pro 2026 - License Verification")
+        self.window.geometry("500x250")
         self.window.resizable(False, False)
+        self.window.configure(bg="#1a1a1a")
         
         # Center window
         self.window.update_idletasks()
@@ -115,7 +116,21 @@ class LicenseCheckWindow:
             bg="#1a1a1a",
             fg="#FFF"
         )
-        status.pack()
+        status.pack(pady=(0, 20))
+        
+        # Loading animation
+        progress_frame = tk.Frame(frame, bg="#1a1a1a", height=30)
+        progress_frame.pack(fill=tk.X, pady=10)
+        
+        # Simple loading dots animation
+        self.loading_label = tk.Label(
+            progress_frame,
+            text="⏳ Checking license...",
+            font=("Arial", 10),
+            bg="#1a1a1a",
+            fg="#4CAF50"
+        )
+        self.loading_label.pack()
         
         self.window.update()
         
@@ -140,16 +155,51 @@ def enforce_license_on_startup(root=None) -> bool:
     """
     license_check = LicenseCheckWindow(root)
     
-    # Show splash during check
-    splash = license_check.show_splash_screen()
+    # First, try to verify existing license (quick check, no UI)
+    is_valid, message = license_check.license_manager.verify_license()
+    
+    if is_valid:
+        # License exists and is valid - proceed immediately
+        print(f"✅ License verified: {message}")
+        return True
+    
+    # No valid license found - show splash and activation dialog
+    print(f"⚠️ License check failed: {message}")
+    print("💬 Showing license activation dialog...")
+    
+    # Create root if not provided
+    if not root:
+        root = tk.Tk()
+        root.withdraw()  # Hide root window initially
     
     try:
-        # Check license
-        is_licensed = license_check.check_license()
-        return is_licensed
-    finally:
-        # Close splash
-        license_check.close_splash()
+        # Show activation dialog directly
+        dialog = LicenseDialog(root, license_check.license_manager)
+        result = dialog.show_activation_dialog()
+        
+        if result:
+            # User activated license successfully
+            print("✅ License activated successfully!")
+            if not root.winfo_exists():
+                root.destroy()
+            return True
+        else:
+            # User cancelled activation
+            print("❌ User cancelled license activation")
+            if not root.winfo_exists():
+                root.destroy()
+            return False
+    
+    except Exception as e:
+        print(f"❌ Error during license activation: {e}")
+        import traceback
+        traceback.print_exc()
+        try:
+            if root.winfo_exists():
+                root.destroy()
+        except:
+            pass
+        return False
 
 
 if __name__ == "__main__":
