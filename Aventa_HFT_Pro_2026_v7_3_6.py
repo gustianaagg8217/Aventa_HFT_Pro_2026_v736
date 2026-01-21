@@ -6,13 +6,16 @@ from trade_database import TradeDatabase
 from telegram_bot import TelegramBot
 from gui_telegram_integration import get_gui_telegram_integration
 
-# License System
+# License System - Will be validated at startup
 try:
     from license_check import enforce_license_on_startup
     from license_manager import LicenseManager
+    from license_validator import validate_license_or_exit
     LICENSE_SYSTEM_AVAILABLE = True
 except ImportError:
+    # If license modules not available, will fail at startup
     LICENSE_SYSTEM_AVAILABLE = False
+    validate_license_or_exit = None
 
 def anti_debug():
     try:
@@ -5547,11 +5550,55 @@ This is a test message from Aventa HFT Pro 2026"""
 
 
 # ============================================
-# MAIN ENTRY POINT
+# MAIN ENTRY POINT - WITH MANDATORY LICENSE CHECK
 # ============================================
-def main():
-    """Main entry point with proper error handling"""
-    try: 
+
+if __name__ == "__main__":
+    """
+    MAIN PROGRAM EXECUTION
+    
+    ⚠️ CRITICAL: License validation is MANDATORY
+    Program CANNOT start without valid license
+    No exceptions, no bypass, no continue without license
+    """
+    
+    import traceback
+    
+    try:
+        # Step 1: MANDATORY License Validation (MUST PASS)
+        # This is the FIRST thing that runs - before any other code
+        try:
+            from license_validator import validate_license_or_exit
+            
+            print("\n" + "="*70)
+            print("🔐 ACTIVATING LICENSE VALIDATION")
+            print("="*70)
+            
+            # validate_license_or_exit() will:
+            # - Check if license is valid
+            # - If not valid, show activation dialog
+            # - If still not valid, EXIT THE PROGRAM
+            # - It never returns False, it always exits on failure
+            validate_license_or_exit()
+            
+        except ImportError:
+            # If license_validator cannot be imported, try old method
+            print("⚠️ License validator not available, trying legacy check...")
+            if LICENSE_SYSTEM_AVAILABLE:
+                if not enforce_license_on_startup():
+                    print("❌ License verification failed. Exiting application.")
+                    sys.exit(1)
+            else:
+                print("❌ License system not available. Cannot proceed.")
+                sys.exit(1)
+        
+        except SystemExit:
+            # License validation called sys.exit() - let it exit
+            raise
+        
+        # Step 2: GUI Initialization (only reached if license is valid)
+        print("\n✅ License validation passed - Initializing GUI...\n")
+        
         root = tk.Tk()
         app = HFTProGUI(root)
         
@@ -5571,29 +5618,25 @@ def main():
             except:
                 pass
         
-        import traceback
         sys.excepthook = handle_exception
         
+        # Step 3: Start GUI event loop
+        print("🚀 Starting GUI event loop...")
         root.mainloop()
+        
+    except SystemExit as e:
+        # License validation or other critical failure
+        print(f"🛑 Program exit: {e}")
+        sys.exit(1)
+    
     except Exception as e:
         print(f"❌ APPLICATION ERROR: {e}")
         import traceback
         traceback.print_exc()
         input("Press Enter to exit...")
+    
     except KeyboardInterrupt:
         print("\n⚠️ Program interrupted by user")
-    finally:
-        print("Program terminated.")
-
-
-
-if __name__ == "__main__":
-    # License System Check
-    if LICENSE_SYSTEM_AVAILABLE:
-        if not enforce_license_on_startup():
-            print("❌ License verification failed. Exiting application.")
-            sys.exit(1)
     
-    root = tk.Tk()
-    app = HFTProGUI(root)
-    root.mainloop()
+    finally:
+        print("\n🛑 Program terminated.")
