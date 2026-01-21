@@ -314,8 +314,16 @@ class LicenseDialog:
         dialog.resizable(False, False)
         dialog.grab_set()
         
-        # Center on parent
-        dialog.transient(self.parent)
+        # Make sure dialog is on top
+        dialog.attributes('-topmost', True)
+        
+        # Center dialog on screen (not parent)
+        dialog.update_idletasks()
+        screen_width = dialog.winfo_screenwidth()
+        screen_height = dialog.winfo_screenheight()
+        x = (screen_width - 700) // 2
+        y = (screen_height - 650) // 2
+        dialog.geometry(f"700x650+{x}+{y}")
         
         # Configure colors
         dialog.configure(bg="#f5f5f5")
@@ -553,11 +561,20 @@ class LicenseDialog:
         )
         help_btn.pack(side=tk.RIGHT)
         
-        # Set minimum size and focus
-        dialog.minsize(600, 500)
+        # Bring dialog to front and set focus
+        dialog.lift()
+        dialog.focus_force()
         serial_entry.focus()
         
-        self.parent.wait_window(dialog)
+        # Update display
+        dialog.update()
+        
+        # Wait for dialog to close
+        try:
+            self.parent.wait_window(dialog)
+        except:
+            pass
+        
         return self.result if hasattr(self, 'result') and self.result else None
     
     def _show_help(self):

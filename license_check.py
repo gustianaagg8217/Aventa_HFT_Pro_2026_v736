@@ -163,14 +163,16 @@ def enforce_license_on_startup(root=None) -> bool:
         print(f"✅ License verified: {message}")
         return True
     
-    # No valid license found - show splash and activation dialog
+    # No valid license found - show activation dialog
     print(f"⚠️ License check failed: {message}")
     print("💬 Showing license activation dialog...")
     
-    # Create root if not provided
+    # Create root window for dialog (VISIBLE, NOT WITHDRAWN)
     if not root:
         root = tk.Tk()
-        root.withdraw()  # Hide root window initially
+        # Don't withdraw - keep visible so dialog appears properly
+        root.geometry("0x0+0+0")  # Move off-screen instead
+        root.attributes('-alpha', 0)  # Make transparent
     
     try:
         # Show activation dialog directly
@@ -180,14 +182,18 @@ def enforce_license_on_startup(root=None) -> bool:
         if result:
             # User activated license successfully
             print("✅ License activated successfully!")
-            if not root.winfo_exists():
+            try:
                 root.destroy()
+            except:
+                pass
             return True
         else:
             # User cancelled activation
             print("❌ User cancelled license activation")
-            if not root.winfo_exists():
+            try:
                 root.destroy()
+            except:
+                pass
             return False
     
     except Exception as e:
@@ -195,8 +201,7 @@ def enforce_license_on_startup(root=None) -> bool:
         import traceback
         traceback.print_exc()
         try:
-            if root.winfo_exists():
-                root.destroy()
+            root.destroy()
         except:
             pass
         return False
