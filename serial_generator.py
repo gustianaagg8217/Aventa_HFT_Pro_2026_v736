@@ -1,14 +1,14 @@
 """
 Serial Number Generator Tool for Aventa HFT Pro
-Admin tool to generate serial numbers for customers
+Admin tool to generate serial numbers for customers with expiry options
 """
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from license_manager import SerialKeyGenerator, HardwareIDGenerator
+from license_manager import SerialKeyGenerator, HardwareIDGenerator, LicenseManager
 
 
 class SerialGeneratorGUI:
@@ -92,6 +92,41 @@ class SerialGeneratorGUI:
         )
         self.serial_display.pack(fill=tk.X, pady=(0, 5))
         
+        # License Type section
+        license_frame = ttk.LabelFrame(main_frame, text="License Type", padding="10")
+        license_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.license_type_var = tk.StringVar(value="unlimited")
+        
+        ttk.Radiobutton(
+            license_frame,
+            text="🔓 Unlimited (No expiry)",
+            variable=self.license_type_var,
+            value="unlimited"
+        ).pack(anchor=tk.W, pady=5)
+        
+        ttk.Radiobutton(
+            license_frame,
+            text="⏱️ Trial 7 Days (auto expire)",
+            variable=self.license_type_var,
+            value="trial"
+        ).pack(anchor=tk.W, pady=5)
+        
+        ttk.Radiobutton(
+            license_frame,
+            text="📅 Custom Days",
+            variable=self.license_type_var,
+            value="custom"
+        ).pack(anchor=tk.W, pady=5)
+        
+        custom_days_frame = ttk.Frame(license_frame)
+        custom_days_frame.pack(anchor=tk.W, pady=5, padx=(20, 0))
+        
+        ttk.Label(custom_days_frame, text="Number of days:").pack(side=tk.LEFT, padx=(0, 5))
+        self.custom_days_entry = ttk.Entry(custom_days_frame, width=10)
+        self.custom_days_entry.pack(side=tk.LEFT)
+        self.custom_days_entry.insert(0, "30")
+        
         # Buttons
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=(0, 15))
@@ -144,7 +179,7 @@ class SerialGeneratorGUI:
         self.log(f"Generated test Hardware ID: {test_hw_id}")
     
     def generate_serial(self):
-        """Generate serial number from hardware ID"""
+        """Generate serial number from hardware ID with expiry option"""
         hardware_id = self.hardware_id_entry.get().strip()
         
         if not hardware_id:
@@ -156,8 +191,31 @@ class SerialGeneratorGUI:
             return
         
         try:
+            # Determine expiry days
+            license_type = self.license_type_var.get()
+            
+            if license_type == "unlimited":
+                expiry_days = -1
+                expiry_label = "Unlimited"
+            elif license_type == "trial":
+                expiry_days = 7
+                expiry_label = "Trial (7 days)"
+            elif license_type == "custom":
+                try:
+                    expiry_days = int(self.custom_days_entry.get())
+                    if expiry_days <= 0:
+                        messagebox.showerror("Error", "Number of days must be positive")
+                        return
+                    expiry_label = f"Limited ({expiry_days} days)"
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid number of days")
+                    return
+            else:
+                expiry_days = -1
+                expiry_label = "Unlimited"
+            
             # Generate serial
-            serial = self.serial_generator.generate_serial(hardware_id)
+            serial = self.serial_generator.generate_serial(hardware_id, expiry_days)
             
             # Display serial
             self.serial_display.delete(1.0, tk.END)
@@ -166,12 +224,17 @@ class SerialGeneratorGUI:
             # Log
             self.log(f"✓ Generated Serial: {serial}")
             self.log(f"  Hardware ID: {hardware_id}")
+            self.log(f"  License Type: {expiry_label}")
+            if expiry_days > 0:
+                expiry_date = (datetime.now() + timedelta(days=expiry_days)).strftime('%Y-%m-%d')
+                self.log(f"  Expiry Date: {expiry_date}")
             self.log(f"  Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             
             # Save to records
-            self.save_record(hardware_id, serial)
+            self.save_record(hardware_id, serial, expiry_days, expiry_label)
             
-            messagebox.showinfo("Success", f"Serial Generated:\n\n{serial}")
+            info_text = f"Serial Generated:\n\n{serial}\n\nType: {expiry_label}"
+            messagebox.showinfo("Success", info_text)
         
         except Exception as e:
             self.log(f"✗ Error: {e}")
@@ -205,8 +268,8 @@ class SerialGeneratorGUI:
         self.log_text.see(tk.END)
         self.root.update()
     
-    def save_record(self, hardware_id: str, serial: str):
-        """Save generation record"""
+    def save_record(self, hardware_id: str, serial: str, expiry_days: int = -1, expiry_label: str = "Unlimited"):
+        """Save generation record with expiry information"""
         try:
             records_file = Path("serial_records.json")
             
@@ -217,11 +280,20 @@ class SerialGeneratorGUI:
             else:
                 records = []
             
+            # Calculate expiry date
+            if expiry_days == -1:
+                expiry_date = None
+            else:
+                expiry_date = (datetime.now() + timedelta(days=expiry_days)).isoformat()
+            
             # Add new record
             records.append({
                 "serial": serial,
                 "hardware_id": hardware_id,
                 "generated": datetime.now().isoformat(),
+                "license_type": expiry_label,
+                "expiry_days": expiry_days,
+                "expiry_date": expiry_date,
                 "activated": False
             })
             

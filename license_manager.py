@@ -159,9 +159,14 @@ class LicenseManager:
         """Get current system hardware ID"""
         return self.hardware_generator.get_hardware_id()
     
-    def create_license(self, serial: str) -> dict:
+    def create_license(self, serial: str, expiry_days: int = -1) -> dict:
         """
         Create a license file with serial number
+        
+        Args:
+            serial: Serial number to activate
+            expiry_days: -1 for unlimited, 7 for trial, or positive number for days
+        
         Returns license data containing activation information
         """
         hardware_id = self.get_hardware_id()
@@ -173,10 +178,26 @@ class LicenseManager:
                 "message": "Serial number does not match this hardware"
             }
         
+        # Calculate expiry date
+        if expiry_days == -1:
+            # Unlimited license
+            expiry_date = None
+            license_type = "unlimited"
+        else:
+            # Trial or limited license
+            expiry_date = (datetime.now() + timedelta(days=expiry_days)).isoformat()
+            if expiry_days == 7:
+                license_type = "trial"
+            else:
+                license_type = "limited"
+        
         license_data = {
             "serial": serial,
             "hardware_id": hardware_id,
             "activation_date": datetime.now().isoformat(),
+            "expiry_date": expiry_date,
+            "license_type": license_type,
+            "expiry_days": expiry_days,
             "status": "active",
             "version": "7.3.6"
         }
@@ -223,7 +244,7 @@ class LicenseManager:
     
     def verify_license(self) -> tuple[bool, str]:
         """
-        Verify if license is valid
+        Verify if license is valid and not expired
         Returns (is_valid, message)
         """
         try:
@@ -245,6 +266,14 @@ class LicenseManager:
             
             if license_data.get("status") != "active":
                 return False, "License is not active"
+            
+            # Check expiry date
+            expiry_date_str = license_data.get("expiry_date")
+            if expiry_date_str is not None:  # None means unlimited
+                expiry_date = datetime.fromisoformat(expiry_date_str)
+                if datetime.now() > expiry_date:
+                    days_expired = (datetime.now() - expiry_date).days
+                    return False, f"License has expired {days_expired} days ago. Please renew your license."
             
             return True, "License is valid"
         
@@ -386,10 +415,26 @@ class LicenseDialog:
             messagebox.showerror("Error", license_data.get("message"))
             return
         
+        # Format expiry information
+        license_type = license_data.get('license_type', 'unknown')
+        expiry_date = license_data.get('expiry_date')
+        
+        if expiry_date:
+            expiry_dt = datetime.fromisoformat(expiry_date)
+            days_remaining = (expiry_dt - datetime.now()).days
+            if days_remaining < 0:
+                expiry_info = f"Expired {abs(days_remaining)} days ago"
+            else:
+                expiry_info = f"Expires in {days_remaining} days ({expiry_date[:10]})"
+        else:
+            expiry_info = "No expiry (Unlimited)"
+        
         info = f"""
         Serial: {license_data.get('serial')}
         Hardware ID: {license_data.get('hardware_id')}
-        Activation Date: {license_data.get('activation_date')}
+        Activation Date: {license_data.get('activation_date')[:10]}
+        License Type: {license_type.upper()}
+        Expiry: {expiry_info}
         Status: {license_data.get('status')}
         Version: {license_data.get('version')}
         """

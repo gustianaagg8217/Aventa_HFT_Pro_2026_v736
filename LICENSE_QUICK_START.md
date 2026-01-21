@@ -55,11 +55,16 @@ pip install cryptography
 
 2. Paste customer's **Hardware ID**
 
-3. Click "Generate Serial"
+3. **Select License Type:**
+   - 🔓 **Unlimited** - License never expires
+   - ⏱️ **Trial** - Auto-expires in 7 days
+   - 📅 **Custom Days** - Specify number of days (30, 90, 180, etc.)
 
-4. Get the **Serial Number**
+4. Click "Generate Serial"
 
-5. Send to customer
+5. Get the **Serial Number**
+
+6. Send to customer
 
 ---
 
@@ -117,6 +122,8 @@ if __name__ == "__main__":
 | "Serial does not match hardware" | Serial is for different computer, get new one |
 | "License bound to different hardware" | Cannot transfer license, need new serial |
 | Error decrypting license | Delete license.json, re-activate |
+| "License has expired" | Admin generates new serial with expiry option |
+| "License expires in X days" | Normal warning in last 3 days, renew when ready |
 
 ---
 

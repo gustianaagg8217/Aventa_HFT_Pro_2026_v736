@@ -6,6 +6,7 @@ This module integrates license check at program startup
 import tkinter as tk
 from tkinter import messagebox
 import sys
+from datetime import datetime, timedelta
 from license_manager import LicenseManager, LicenseDialog
 
 
@@ -29,7 +30,29 @@ class LicenseCheckWindow:
         is_valid, message = self.license_manager.verify_license()
         
         if is_valid:
-            print(f"✅ License verified: {message}")
+            # License is valid - show expiry info if applicable
+            license_data = self.license_manager.load_license()
+            license_type = license_data.get('license_type', 'unknown')
+            expiry_date = license_data.get('expiry_date')
+            
+            if expiry_date:
+                expiry_dt = datetime.fromisoformat(expiry_date)
+                days_remaining = (expiry_dt - datetime.now()).days
+                print(f"✅ License verified: {message}")
+                print(f"   Type: {license_type}")
+                print(f"   Expires in: {days_remaining} days ({expiry_date[:10]})")
+                
+                # Show warning if expiring soon (3 days or less)
+                if 0 < days_remaining <= 3:
+                    messagebox.showwarning(
+                        "License Expiring Soon",
+                        f"Your {license_type} license will expire in {days_remaining} days.\n\n"
+                        f"Please renew your license to continue using the software."
+                    )
+            else:
+                print(f"✅ License verified: {message}")
+                print(f"   Type: Unlimited (No expiry)")
+            
             self.is_licensed = True
             return True
         
