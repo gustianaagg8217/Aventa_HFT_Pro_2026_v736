@@ -63,8 +63,8 @@ if %errorlevel% neq 0 (
 REM ============================================================
 REM 6. CEK FILE PROGRAM
 REM ============================================================
-if not exist "Aventa_HFT_Pro_2026_v7_3_5.py" (
-    echo [ERROR] Aventa_HFT_Pro_2026_v7_3_5.py tidak ditemukan
+if not exist "Aventa_HFT_Pro_2026_v7_3_6.py" (
+    echo [ERROR] Aventa_HFT_Pro_2026_v7_3_6.py tidak ditemukan
     pause
     exit /b 1
 )
@@ -80,7 +80,7 @@ REM 7. JALANKAN PROGRAM (PARALEL)
 REM ============================================================
 echo.
 echo [INFO] Menjalankan AVENTA HFT PRO 2026...
-start "AVENTA_HFT" cmd /k python Aventa_HFT_Pro_2026_v7_3_5.py
+start "AVENTA_HFT" cmd /k python Aventa_HFT_Pro_2026_v7_3_6.py
 
 echo [INFO] Menjalankan TELEGRAM BOT...
 start "TELEGRAM_BOT" cmd /k python start_telegram_bot_manual.py

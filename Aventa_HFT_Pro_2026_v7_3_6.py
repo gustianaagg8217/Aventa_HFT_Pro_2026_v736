@@ -50,7 +50,7 @@ if False:
 # Translation dictionaries
 TRANSLATIONS = {
     'EN': {
-        'title': '🚀 AVENTA HFT PRO 2026 v7.3.5',
+        'title': '🚀 AVENTA HFT PRO 2026 v7.3.6',
         'tab_control': '⚙️ Control Panel',
         'tab_performance': '📊 Performance',
         'tab_risk': '🛡️ Risk Management',
@@ -63,7 +63,7 @@ TRANSLATIONS = {
         'status_stopped': 'Status:  Stopped',
     },
     'ID': {
-        'title': '🚀 AVENTA HFT PRO 2026 v7.3.5',
+        'title': '🚀 AVENTA HFT PRO 2026 v7.3.6',
         'tab_control': '⚙️ Panel Kontrol',
         'tab_performance': '📊 Performa',
         'tab_risk': '🛡️ Manajemen Risiko',
