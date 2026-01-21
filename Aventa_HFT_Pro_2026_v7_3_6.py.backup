@@ -6,14 +6,6 @@ from trade_database import TradeDatabase
 from telegram_bot import TelegramBot
 from gui_telegram_integration import get_gui_telegram_integration
 
-# License System
-try:
-    from license_check import enforce_license_on_startup
-    from license_manager import LicenseManager
-    LICENSE_SYSTEM_AVAILABLE = True
-except ImportError:
-    LICENSE_SYSTEM_AVAILABLE = False
-
 def anti_debug():
     try:
         if ctypes.windll.kernel32.IsDebuggerPresent():
@@ -5587,13 +5579,7 @@ def main():
 
 
 
-if __name__ == "__main__":
-    # License System Check
-    if LICENSE_SYSTEM_AVAILABLE:
-        if not enforce_license_on_startup():
-            print("❌ License verification failed. Exiting application.")
-            sys.exit(1)
-    
+if __name__ == "__main__": 
     root = tk.Tk()
     app = HFTProGUI(root)
     root.mainloop()
