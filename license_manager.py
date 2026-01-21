@@ -325,23 +325,23 @@ class LicenseDialog:
         y = (screen_height - 650) // 2
         dialog.geometry(f"700x650+{x}+{y}")
         
-        # Configure colors
-        dialog.configure(bg="#f5f5f5")
+        # Configure colors (match main program dark theme)
+        dialog.configure(bg="#0a0e27")
         
         # Main frame with padding
-        main_frame = tk.Frame(dialog, bg="#f5f5f5")
+        main_frame = tk.Frame(dialog, bg="#0a0e27")
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
         # ===== HEADER SECTION =====
-        header_frame = tk.Frame(main_frame, bg="#2196F3")
+        header_frame = tk.Frame(main_frame, bg="#7c4dff")
         header_frame.pack(fill=tk.X, pady=(0, 20), ipady=10)
         
         title_label = tk.Label(
             header_frame,
             text="🔐 LICENSE ACTIVATION REQUIRED",
             font=("Arial", 14, "bold"),
-            bg="#2196F3",
-            fg="white"
+            bg="#7c4dff",
+            fg="#ffffff"
         )
         title_label.pack(pady=5)
         
@@ -349,7 +349,7 @@ class LicenseDialog:
             header_frame,
             text="This software requires a valid license to run",
             font=("Arial", 10),
-            bg="#2196F3",
+            bg="#7c4dff",
             fg="#e0e0e0"
         )
         subtitle_label.pack()
@@ -359,7 +359,8 @@ class LicenseDialog:
             main_frame,
             text="📋 Instructions",
             font=("Arial", 10, "bold"),
-            bg="#ffffff",
+            bg="#1a1e3a",
+            fg="#e0e0e0",
             padx=15,
             pady=10
         )
@@ -374,8 +375,8 @@ class LicenseDialog:
                 "4. Click 'Activate' to complete activation"
             ),
             font=("Arial", 9),
-            bg="#ffffff",
-            fg="#333",
+            bg="#1a1e3a",
+            fg="#e0e0e0",
             justify=tk.LEFT
         )
         instructions_text.pack(anchor=tk.W, fill=tk.X)
@@ -384,20 +385,21 @@ class LicenseDialog:
         hw_frame = tk.LabelFrame(
             main_frame,
             text="🔧 Hardware ID (Unique to this PC)",
-            font=("Arial", 10, "bold"),
-            bg="#ffffff",
+            font="#1a1e3a",
+            fg="#e0e0e0",
             padx=15,
             pady=10
         )
         hw_frame.pack(fill=tk.X, pady=(0, 15))
         
         # Hardware ID display (read-only text widget for easy selection)
-        hw_text = tk.Text(hw_frame, height=2, width=80, font=("Courier", 10))
+        hw_text = tk.Text(hw_frame, height=2, width=80, font=("Courier", 10), bg="#252952", fg="#00e676")
         hw_text.pack(fill=tk.BOTH, expand=True)
         hw_text.insert(1.0, hardware_id)
-        hw_text.config(state=tk.DISABLED, bg="#f0f0f0")
+        hw_text.config(state=tk.DISABLED, bg="#252952")
         
         # Copy button
+        copy_frame = tk.Frame(hw_frame, bg="#1a1e3a")
         copy_frame = tk.Frame(hw_frame, bg="#ffffff")
         copy_frame.pack(fill=tk.X, pady=(10, 0))
         
@@ -410,11 +412,11 @@ class LicenseDialog:
             copy_frame,
             text="📋 Copy Hardware ID",
             command=copy_hw_id,
-            bg="#4CAF50",
-            fg="white",
+            bg="#00e676",
+            fg="#000000",
             padx=15,
             pady=5,
-            font=("Arial", 9)
+            font=("Arial", 9, "bold")
         )
         copy_btn.pack(side=tk.LEFT)
         
@@ -422,8 +424,8 @@ class LicenseDialog:
         serial_frame = tk.LabelFrame(
             main_frame,
             text="🔐 Enter Serial Number",
-            font=("Arial", 10, "bold"),
-            bg="#ffffff",
+            font="#1a1e3a",
+            fg="#e0e0e0",
             padx=15,
             pady=10
         )
@@ -433,18 +435,19 @@ class LicenseDialog:
             serial_frame,
             text="Format: AV-XXXX-XXXX-XXXX-XXXX",
             font=("Arial", 8),
-            bg="#ffffff",
-            fg="#999"
+            bg="#1a1e3a",
+            fg="#999999"
         )
         hint_label.pack(anchor=tk.W, pady=(0, 5))
         
         serial_entry = tk.Entry(
             serial_frame,
             font=("Arial", 12, "bold"),
-            bg="#ffffff",
-            fg="#333",
+            bg="#252952",
+            fg="#00e676",
             relief=tk.FLAT,
-            bd=2
+            bd=2,
+            insertbackground="#00e676"
         )
         serial_entry.pack(fill=tk.X, pady=(0, 10))
         serial_entry.focus()
@@ -454,8 +457,8 @@ class LicenseDialog:
             serial_frame,
             text="",
             font=("Arial", 9),
-            bg="#ffffff",
-            fg="#d32f2f"
+            bg="#1a1e3a",
+            fg="#ff1744"
         )
         status_label.pack(anchor=tk.W)
         
@@ -469,8 +472,8 @@ class LicenseDialog:
             
             if not serial:
                 status_label.config(
-                    text="❌ Error: Please enter a serial number",
-                    fg="#d32f2f"
+                    text="❌ Please enter a serial number.",
+                    fg="#ff1744"
                 )
                 status_label.pack(anchor=tk.W)
                 return
@@ -478,7 +481,7 @@ class LicenseDialog:
             # Try to activate
             status_label.config(
                 text="⏳ Activating...",
-                fg="#2196F3"
+                fg="#00b0ff"
             )
             status_label.pack(anchor=tk.W)
             dialog.update()
@@ -489,7 +492,7 @@ class LicenseDialog:
                 if license_data.get("status") == "error":
                     status_label.config(
                         text=f"❌ Activation Failed: {license_data.get('message')}",
-                        fg="#d32f2f"
+                        fg="#ff1744"
                     )
                     status_label.pack(anchor=tk.W)
                     return
@@ -506,15 +509,15 @@ class LicenseDialog:
                     dialog.destroy()
                 else:
                     status_label.config(
-                        text="❌ Error: Failed to save license",
-                        fg="#d32f2f"
+                        text="❌ Failed to save license file.",
+                        fg="#ff1744"
                     )
                     status_label.pack(anchor=tk.W)
             
             except Exception as e:
                 status_label.config(
                     text=f"❌ Error: {str(e)}",
-                    fg="#d32f2f"
+                    fg="#ff1744"
                 )
                 status_label.pack(anchor=tk.W)
         
@@ -522,8 +525,8 @@ class LicenseDialog:
             button_frame,
             text="✅ Activate License",
             command=activate,
-            bg="#4CAF50",
-            fg="white",
+            bg="#00e676",
+            fg="#000000",
             padx=30,
             pady=12,
             font=("Arial", 10, "bold"),
@@ -536,7 +539,7 @@ class LicenseDialog:
             button_frame,
             text="❌ Cancel",
             command=lambda: dialog.destroy(),
-            bg="#f44336",
+            bg="#ff1744",
             fg="white",
             padx=30,
             pady=12,
@@ -551,7 +554,7 @@ class LicenseDialog:
             button_frame,
             text="❓ Need Help?",
             command=self._show_help,
-            bg="#FF9800",
+            bg="#7c4dff",
             fg="white",
             padx=20,
             pady=12,
