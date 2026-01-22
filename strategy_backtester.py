@@ -152,8 +152,9 @@ class StrategyBacktester:
                     logger.info(f"✓ Found exact match: {requested_symbol} → {sym}")
                     return sym
             
-            # Partial match (case insensitive) - match by main name
-            requested_upper = requested_symbol.upper().split('.')[0]  # Get base name (e.g., GOLD from GOLD.H1)
+            # Partial match (case insensitive) - handle suffixes like .sc, .H1, etc.
+            # Split by dot to remove suffix (XAUUSD.sc → XAUUSD)
+            requested_upper = requested_symbol.upper().split('.')[0]
             for sym in available_symbols:
                 sym_base = sym.upper().split('.')[0]
                 if sym_base == requested_upper:

@@ -1224,6 +1224,21 @@ class UltraLowLatencyEngine:
                 )
             return False
 
+        # ✅ Enforcement: Daily target profit check (NEW)
+        daily_target_profit = self.config.get("daily_target_profit", 0)
+        if daily_target_profit > 0 and daily_pnl >= daily_target_profit:
+            logger.warning(
+                f"🎯 DAILY TARGET PROFIT HIT: ${daily_pnl:.2f} >= ${daily_target_profit:.2f}"
+            )
+            logger.warning(
+                f"   Trading PAUSED until tomorrow - Target reached!"
+            )
+            if self.risk_manager:
+                self.risk_manager.trigger_circuit_breaker(
+                    f"Daily target profit reached: ${daily_pnl:.2f}"
+                )
+            return False
+
         # Enforcement: daily trade count hard block
         daily_trades = self.get_today_trade_count()
         max_daily_trades = self.config.get("max_daily_trades", 0)
@@ -1621,6 +1636,10 @@ class UltraLowLatencyEngine:
                     # Check floating profit target (total floating profit - commission)
                     floating_profit = self.get_total_floating_profit()  # ✅ Sudah NET (profit - commission)
                     max_profit_target = self.config.get('max_floating_profit', 0.5)
+                    
+                    # ✅ NEW: Check Daily Target Profit
+                    daily_pnl = self.get_today_closed_pnl() + floating_profit  # Include both closed & floating
+                    daily_target_profit = self.config.get('daily_target_profit', 0)
 
                     if pos_count > 0:
                         commission_per_trade = self.config.get('commission_per_trade', 0.0)
@@ -1629,11 +1648,19 @@ class UltraLowLatencyEngine:
                         # ✅ FIXED: Added .2f to max_floating
                         logger.info(f"📊 Status Posisi: {pos_count} posisi kebuka (Magic: {magic}) | "
                                     f"Profit (NET): ${floating_profit:.2f} | "
+                                    f"Daily PnL: ${daily_pnl:.2f} | "
                                     f"Commission: ${total_commission:.2f} | "
                                     f"Rugi: ${floating_loss:.2f}/${max_floating:.2f}")  # ← FIXED!
                         
+                        # ✅ NEW: Check Daily Target Profit FIRST (higher priority)
+                        if daily_target_profit > 0 and daily_pnl >= daily_target_profit:
+                            logger.warning(f"🎯 DAILY TARGET PROFIT REACHED: ${daily_pnl:.2f} >= ${daily_target_profit:.2f}")
+                            logger.warning(f"   Tutup semua posisi - Trading target tercapai!")
+                            closed = self.close_all_positions(reason=f"Daily_Target_{daily_pnl:.2f}")
+                            if closed > 0:
+                                logger.info(f"✓ Berhasil nutup {closed} posisi - Daily target tercapai!")
                         # ✅ UNIFIED CHECK: Gunakan config max_profit_target (hapus hardcoded $1)
-                        if floating_profit >= max_profit_target:
+                        elif floating_profit >= max_profit_target:
                             logger.warning(f"🎯 Target profit tercapai: ${floating_profit:.2f} >= ${max_profit_target:.2f} (SETELAH KOMISI)")
                             logger.warning(f"   Total Commission Paid: ${total_commission:.2f}")
                             logger.warning(f"   Tutup semua posisi biar profitnya nggak ilang!")
