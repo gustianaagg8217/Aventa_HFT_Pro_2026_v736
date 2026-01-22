@@ -431,8 +431,7 @@ class LicenseDialog:
         dialog.geometry("700x650")
         dialog.resizable(False, False)
         
-        # Make sure dialog is on top
-        dialog.attributes('-topmost', True)
+        # Dialog normal window (not always on top)
         dialog.grab_set()
         
         # Center dialog on screen (not parent)
