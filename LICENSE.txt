@@ -2,7 +2,7 @@
 AVENTA HFT PRO 2026 - END USER LICENSE AGREEMENT (EULA)
 ================================================================================
 
-Version 7.3.5
+Version 7.3.6
 Release Date: January 2026
 
 Copyright (c) 2026 PT. Aventa AI. All rights reserved.

@@ -21,7 +21,7 @@ QUICK START GUIDE
    Option C: From Command Line
    - Open Command Prompt or PowerShell
    - Navigate to installation directory
-   - Run: python Aventa_HFT_Pro_2026_v7_3_5.py
+   - Run: python Aventa_HFT_Pro_2026_v7_3_6.py
 
 2. INITIAL SETUP
 
