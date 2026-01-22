@@ -188,7 +188,7 @@ class LicenseManager:
         
         Args:
             serial: Serial number to activate
-            expiry_days: -1 for unlimited, 7 for trial, or positive number for days
+            expiry_days: If -1, will be extracted from serial metadata
         
         Returns license data containing activation information
         """
@@ -201,7 +201,11 @@ class LicenseManager:
                 "message": "Serial number does not match this hardware"
             }
         
-        # Calculate expiry date
+        # PENTING: Extract expiry_days from serial metadata if not provided
+        if expiry_days == -1:
+            expiry_days = self._extract_expiry_days_from_serial(serial)
+        
+        # Calculate expiry date dan license type
         if expiry_days == -1:
             # Unlimited license
             expiry_date = None
@@ -226,6 +230,29 @@ class LicenseManager:
         }
         
         return license_data
+    
+    def _extract_expiry_days_from_serial(self, serial: str) -> int:
+        """
+        Extract expiry_days from encoded metadata in serial number
+        
+        Serial format: AV-XXXX-XXXX-MMMM-HHHH
+        MMMM = metadata segment containing expiry information
+        
+        Returns expiry_days (-1 for unlimited, 7 for trial, N for custom days)
+        """
+        try:
+            # Parse serial format: AV-XXXX-XXXX-MMMM-HHHH
+            parts = serial.split('-')
+            if len(parts) != 5:
+                return -1  # Invalid format, default to unlimited
+            
+            metadata_seg = parts[3]  # MMMM segment
+            
+            # Use SerialKeyGenerator decode method
+            expiry_days = self.serial_generator._decode_metadata(metadata_seg)
+            return expiry_days
+        except:
+            return -1  # Default to unlimited on error
     
     def save_license(self, license_data: dict) -> bool:
         """Save encrypted license file"""
@@ -610,6 +637,7 @@ class LicenseDialog:
                 status_label.pack(anchor=tk.W)
                 dialog.update()
                 
+                # Create license - expiry_days akan di-extract dari serial metadata
                 license_data = self.license_manager.create_license(serial)
                 
                 if license_data.get("status") == "error":
@@ -625,12 +653,30 @@ class LicenseDialog:
                     # Mark as successful
                     self.result = True
                     
-                    # Show success message
+                    # Prepare success message dengan license info
+                    license_type = license_data.get('license_type', 'unknown').upper()
+                    expiry_date = license_data.get('expiry_date')
+                    
+                    if license_type == 'UNLIMITED':
+                        license_info = "📅 Type: UNLIMITED (No Expiry)"
+                    elif license_type == 'TRIAL':
+                        license_info = "📅 Type: TRIAL (7 Days)"
+                    else:
+                        # Custom days license
+                        expiry_days = license_data.get('expiry_days', 0)
+                        license_info = f"📅 Type: LIMITED ({expiry_days} Days)"
+                        if expiry_date:
+                            from datetime import datetime
+                            expiry_dt = datetime.fromisoformat(expiry_date)
+                            license_info += f"\n📆 Expires: {expiry_dt.strftime('%d %B %Y')}"
+                    
+                    # Show success message with license details
                     messagebox.showinfo(
                         "✅ Success",
-                        "License activated successfully!\n\n"
-                        "This serial number is now bound to this computer.\n"
-                        "The application will now start."
+                        f"License activated successfully!\n\n"
+                        f"{license_info}\n\n"
+                        f"This serial number is now bound to this computer.\n"
+                        f"The application will now start."
                     )
                     
                     # Destroy dialog after message is closed
