@@ -79,6 +79,11 @@ class RiskManager:
         self.circuit_breaker_triggered = False
         self.last_reset_date = datetime.now().date()
         
+        # ✅ NEW: Daily Target Profit
+        self.daily_target_profit = config.get('daily_target_profit', 0.0)  # $
+        self.target_profit_reached = False
+        self.target_profit_pause_time = None  # When target was reached
+        
         # Statistics
         self.wins = 0
         self.losses = 0
@@ -111,6 +116,11 @@ class RiskManager:
                 self.peak_balance = 0.0
             self.current_drawdown = 0.0  # Reset current drawdown
             self.max_drawdown_today = 0.0  # ✅ NEW: Reset max drawdown for new day
+            
+            # ✅ NEW: Reset target profit reached flag for new day
+            self.target_profit_reached = False
+            self.target_profit_pause_time = None
+            
             self.last_reset_date = today
             
             # Reset circuit breaker if new day
@@ -127,9 +137,17 @@ class RiskManager:
         # ✅ FIX: Pass account_balance to reset_daily_stats
         self.reset_daily_stats(account_balance)
         
+        # ✅ NEW: Check if target profit reached and pause is still active
+        if self.daily_target_profit > 0:
+            self._check_target_profit_pause()
+        
         # Check circuit breaker
         if self.circuit_breaker_triggered:
             return False, "Circuit breaker triggered - trading halted"
+        
+        # ✅ NEW: Check target profit pause status
+        if self.target_profit_reached:
+            return False, f"Daily target profit reached (${self.daily_target_profit:.2f}) - Trading paused until 06:00 WIB tomorrow"
         
         # Check daily loss limit
         if self.daily_pnl <= -self.max_daily_loss:
@@ -157,6 +175,70 @@ class RiskManager:
         self.circuit_breaker_triggered = True
         self.trading_enabled = False
         self.last_circuit_reason = reason
+    
+    # ✅ NEW: Target Profit Methods
+    def check_daily_target_profit(self) -> Tuple[bool, str]:
+        """
+        Check if daily target profit has been reached
+        Returns: (target_reached, message)
+        """
+        if self.daily_target_profit <= 0:
+            return False, "No target profit set"
+        
+        if self.daily_pnl >= self.daily_target_profit:
+            if not self.target_profit_reached:
+                self.target_profit_reached = True
+                self.target_profit_pause_time = datetime.now()
+                logger.info(f"🎯 DAILY TARGET PROFIT REACHED: ${self.daily_pnl:.2f} >= ${self.daily_target_profit:.2f}")
+                logger.info(f"   Trading PAUSED until 06:00 WIB tomorrow (only closing positions via TP)")
+                return True, f"Target profit reached: ${self.daily_pnl:.2f}"
+            return True, f"Target profit maintained: ${self.daily_pnl:.2f}"
+        
+        return False, f"Target profit not reached: ${self.daily_pnl:.2f} < ${self.daily_target_profit:.2f}"
+    
+    def _check_target_profit_pause(self):
+        """
+        Check if target profit pause should be lifted (06:00 WIB)
+        Automatically resumes trading at 06:00 WIB
+        """
+        if not self.target_profit_reached or not self.target_profit_pause_time:
+            return
+        
+        now = datetime.now()
+        # Check if we've crossed into 06:00 WIB or later
+        resume_time = now.replace(hour=6, minute=0, second=0, microsecond=0)
+        
+        if now.hour >= 6 and now.date() > self.target_profit_pause_time.date():
+            # New day has arrived and it's past 06:00
+            logger.info("✅ Resuming trading - 06:00 WIB reached on new day")
+            self.target_profit_reached = False
+            self.target_profit_pause_time = None
+        elif now >= resume_time and now.date() == self.target_profit_pause_time.date():
+            # Same day but time is past 06:00
+            logger.info("✅ Resuming trading - 06:00 WIB threshold passed")
+            self.target_profit_reached = False
+            self.target_profit_pause_time = None
+    
+    def set_daily_target_profit(self, target_amount: float):
+        """Set daily target profit in USD"""
+        self.daily_target_profit = max(0, target_amount)
+        logger.info(f"📊 Daily target profit set to: ${self.daily_target_profit:.2f}")
+    
+    def update_pnl(self, trade_pnl: float):
+        """Update daily PnL and check target profit"""
+        self.daily_pnl += trade_pnl
+        
+        # Check if target profit reached
+        if self.daily_target_profit > 0:
+            self.check_daily_target_profit()
+        
+        # Update statistics
+        if trade_pnl > 0:
+            self.wins += 1
+            self.total_profit += trade_pnl
+        else:
+            self.losses += 1
+            self.total_loss += abs(trade_pnl)
 
     def calculate_position_size(self, 
                                 account_balance: float,
