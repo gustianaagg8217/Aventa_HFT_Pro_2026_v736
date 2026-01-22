@@ -26,10 +26,4 @@ Backtest/
 .xlsx
 .db
 .backup
-serial_generator.py 
-test_modern_ui.py
-test_activation_dialog.py
-test_serial_generator_gui.py
-test_integration_expiry.py
-test_expiry_system.py
-test_license_system.py
+serial_generator.py
