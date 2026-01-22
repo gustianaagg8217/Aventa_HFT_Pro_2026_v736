@@ -410,6 +410,14 @@ class LicenseDialog:
         self.license_manager = license_manager
         self.result = None
     
+    def _safe_destroy(self, window):
+        """Safely destroy a window without errors"""
+        try:
+            if window and window.winfo_exists():
+                window.destroy()
+        except:
+            pass  # Already destroyed or error - ignore
+    
     def show_activation_dialog(self) -> bool:
         """Show license activation dialog with detailed instructions"""
         import tkinter as tk
@@ -615,18 +623,20 @@ class LicenseDialog:
                 
                 # Save license
                 if self.license_manager.save_license(license_data):
+                    # Mark as successful
+                    self.result = True
+                    
+                    # Show success message
                     messagebox.showinfo(
                         "✅ Success",
                         "License activated successfully!\n\n"
                         "This serial number is now bound to this computer.\n"
                         "The application will now start."
                     )
-                    self.result = True
-                    # Safely destroy dialog
-                    try:
-                        dialog.destroy()
-                    except:
-                        pass
+                    
+                    # Destroy dialog after message is closed
+                    # Use after to ensure messagebox is fully closed first
+                    dialog.after(100, lambda: self._safe_destroy(dialog))
                 else:
                     status_label.config(
                         text="❌ Failed to save license file.",
@@ -661,7 +671,7 @@ class LicenseDialog:
         cancel_btn = tk.Button(
             button_frame,
             text="❌ Cancel",
-            command=lambda: dialog.destroy(),
+            command=lambda: self._safe_destroy(dialog),
             bg="#ff1744",
             fg="white",
             padx=30,

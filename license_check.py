@@ -182,28 +182,34 @@ def enforce_license_on_startup(root=None) -> bool:
         if result:
             # User activated license successfully
             print("✅ License activated successfully!")
-            try:
-                root.destroy()
-            except:
-                pass
+            # Only destroy if it's our root (not provided by caller)
+            if root and not hasattr(root, '_provided_root'):
+                try:
+                    root.destroy()
+                except:
+                    pass  # Already destroyed or error - ignore
             return True
         else:
             # User cancelled activation
             print("❌ User cancelled license activation")
-            try:
-                root.destroy()
-            except:
-                pass
+            # Only destroy if it's our root (not provided by caller)
+            if root and not hasattr(root, '_provided_root'):
+                try:
+                    root.destroy()
+                except:
+                    pass  # Already destroyed or error - ignore
             return False
     
     except Exception as e:
         print(f"❌ Error during license activation: {e}")
         import traceback
         traceback.print_exc()
-        try:
-            root.destroy()
-        except:
-            pass
+        # Only destroy if it's our root (not provided by caller)
+        if root and not hasattr(root, '_provided_root'):
+            try:
+                root.destroy()
+            except:
+                pass  # Already destroyed or error - ignore
         return False
 
 

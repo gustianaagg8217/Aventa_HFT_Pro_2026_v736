@@ -109,28 +109,43 @@ class LicenseValidator:
             root = tk.Tk()
             root.withdraw()
             
-            # Show license check
+            # Show license check - this handles the dialog and cleanup internally
             result = enforce_license_on_startup(root)
             
+            # enforce_license_on_startup already destroys root, so just handle the result
             if not result:
+                # Need to create new root for error message since previous was destroyed
+                error_root = tk.Tk()
+                error_root.withdraw()
                 messagebox.showerror(
                     "❌ ACTIVATION REQUIRED",
                     "License activation failed.\n\n"
                     "The application cannot run without a valid license.\n"
                     "Please try again or contact support."
                 )
-                root.destroy()
+                error_root.destroy()
                 sys.exit(1)
             
-            root.destroy()
+            # Activation successful - root already destroyed by enforce_license_on_startup
             return True
             
         except Exception as e:
             print(f"❌ Failed to show activation dialog: {e}")
-            messagebox.showerror(
-                "Error",
-                f"Failed to show license activation dialog.\n\n{str(e)}"
-            )
+            import traceback
+            traceback.print_exc()
+            
+            # Try to show error with new root window
+            try:
+                error_root = tk.Tk()
+                error_root.withdraw()
+                messagebox.showerror(
+                    "Error",
+                    f"Failed to show license activation dialog.\n\n{str(e)}"
+                )
+                error_root.destroy()
+            except:
+                pass
+            
             sys.exit(1)
 
 
