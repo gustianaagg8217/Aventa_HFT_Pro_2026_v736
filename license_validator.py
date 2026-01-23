@@ -108,11 +108,18 @@ class LicenseValidator:
             # Create root for dialog
             root = tk.Tk()
             root.withdraw()
+            root.attributes('-alpha', 0)  # Make invisible while dialog is shown
             
             # Show license check - this handles the dialog and cleanup internally
             result = enforce_license_on_startup(root)
             
-            # enforce_license_on_startup already destroys root, so just handle the result
+            # Clean up root window regardless of result
+            try:
+                if root.winfo_exists():
+                    root.destroy()
+            except:
+                pass
+            
             if not result:
                 # Need to create new root for error message since previous was destroyed
                 error_root = tk.Tk()
@@ -126,7 +133,7 @@ class LicenseValidator:
                 error_root.destroy()
                 sys.exit(1)
             
-            # Activation successful - root already destroyed by enforce_license_on_startup
+            # Activation successful - ensure root is destroyed and return True
             return True
             
         except Exception as e:

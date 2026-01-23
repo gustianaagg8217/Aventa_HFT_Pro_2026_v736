@@ -679,9 +679,17 @@ class LicenseDialog:
                         f"The application will now start."
                     )
                     
-                    # Destroy dialog after message is closed
-                    # Use after to ensure messagebox is fully closed first
-                    dialog.after(100, lambda: self._safe_destroy(dialog))
+                    # Immediately close the dialog and parent windows
+                    # This prevents any issues with window destruction timing
+                    try:
+                        if dialog.winfo_exists():
+                            dialog.quit()
+                            dialog.destroy()
+                    except:
+                        pass
+                    
+                    # Exit the dialog loop immediately
+                    return True
                 else:
                     status_label.config(
                         text="❌ Failed to save license file.",

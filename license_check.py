@@ -167,9 +167,11 @@ def enforce_license_on_startup(root=None) -> bool:
     print(f"⚠️ License check failed: {message}")
     print("💬 Showing license activation dialog...")
     
-    # Create root window for dialog (VISIBLE, NOT WITHDRAWN)
+    # Create root window for dialog
+    root_created_here = False
     if not root:
         root = tk.Tk()
+        root_created_here = True
         # Don't withdraw - keep visible so dialog appears properly
         root.geometry("0x0+0+0")  # Move off-screen instead
         root.attributes('-alpha', 0)  # Make transparent
@@ -179,38 +181,63 @@ def enforce_license_on_startup(root=None) -> bool:
         dialog = LicenseDialog(root, license_check.license_manager)
         result = dialog.show_activation_dialog()
         
+        # After dialog returns, verify license again
+        # This ensures the license was actually saved correctly
         if result:
-            # User activated license successfully
-            print("✅ License activated successfully!")
-            # Only destroy if it's our root (not provided by caller)
-            if root and not hasattr(root, '_provided_root'):
-                try:
-                    root.destroy()
-                except:
-                    pass  # Already destroyed or error - ignore
-            return True
+            print("✅ Dialog returned True - activation attempted")
+            
+            # Wait a moment for file I/O to complete
+            import time
+            time.sleep(0.5)
+            
+            # Verify license was actually saved
+            is_valid, message = license_check.license_manager.verify_license()
+            
+            if is_valid:
+                print(f"✅ License verified after activation: {message}")
+                # Clean up root if we created it
+                if root_created_here:
+                    try:
+                        if root.winfo_exists():
+                            root.destroy()
+                    except:
+                        pass
+                return True
+            else:
+                print(f"❌ License still invalid after activation: {message}")
+                # Clean up root if we created it
+                if root_created_here:
+                    try:
+                        if root.winfo_exists():
+                            root.destroy()
+                    except:
+                        pass
+                return False
         else:
-            # User cancelled activation
-            print("❌ User cancelled license activation")
-            # Only destroy if it's our root (not provided by caller)
-            if root and not hasattr(root, '_provided_root'):
+            # User cancelled activation or dialog returned False
+            print("❌ User cancelled license activation or activation failed")
+            # Clean up root if we created it
+            if root_created_here:
                 try:
-                    root.destroy()
+                    if root.winfo_exists():
+                        root.destroy()
                 except:
-                    pass  # Already destroyed or error - ignore
+                    pass
             return False
     
     except Exception as e:
         print(f"❌ Error during license activation: {e}")
         import traceback
         traceback.print_exc()
-        # Only destroy if it's our root (not provided by caller)
-        if root and not hasattr(root, '_provided_root'):
+        # Clean up root if we created it
+        if root_created_here:
             try:
-                root.destroy()
+                if root.winfo_exists():
+                    root.destroy()
             except:
-                pass  # Already destroyed or error - ignore
+                pass
         return False
+
 
 
 if __name__ == "__main__":
