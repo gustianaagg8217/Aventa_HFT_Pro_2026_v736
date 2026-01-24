@@ -33,6 +33,13 @@ class CSVToExcelConverter:
         self.output_folder_var = tk.StringVar(value="Backtest")
         self.is_converting = False
         
+        # Trading parameters
+        self.symbol_var = tk.StringVar(value="XAUUSD")
+        self.period_var = tk.StringVar(value="M15")
+        self.company_var = tk.StringVar(value="MetaTrader 5")
+        self.currency_var = tk.StringVar(value="USD")
+        self.leverage_var = tk.StringVar(value="1:500")
+        
         # Configure styles
         self.setup_styles()
         self.setup_ui()
@@ -93,8 +100,27 @@ class CSVToExcelConverter:
         ttk.Button(output_input_frame, text="🔍 Browse", command=self.browse_output, width=12).pack(side=tk.LEFT)
         
         # === OPTIONS ===
-        options_frame = ttk.LabelFrame(main_frame, text="⚙️ Options", padding="10")
+        options_frame = ttk.LabelFrame(main_frame, text="⚙️ Trading Parameters", padding="10")
         options_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Trading parameters grid
+        params_frame = ttk.Frame(options_frame)
+        params_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(params_frame, text="Symbol:", font=("Segoe UI", 9)).grid(row=0, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(params_frame, textvariable=self.symbol_var, width=15).grid(row=0, column=1, sticky=tk.W, padx=5, pady=3)
+        
+        ttk.Label(params_frame, text="Period:", font=("Segoe UI", 9)).grid(row=0, column=2, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(params_frame, textvariable=self.period_var, width=15).grid(row=0, column=3, sticky=tk.W, padx=5, pady=3)
+        
+        ttk.Label(params_frame, text="Company:", font=("Segoe UI", 9)).grid(row=1, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(params_frame, textvariable=self.company_var, width=15).grid(row=1, column=1, sticky=tk.W, padx=5, pady=3)
+        
+        ttk.Label(params_frame, text="Currency:", font=("Segoe UI", 9)).grid(row=1, column=2, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(params_frame, textvariable=self.currency_var, width=15).grid(row=1, column=3, sticky=tk.W, padx=5, pady=3)
+        
+        ttk.Label(params_frame, text="Leverage:", font=("Segoe UI", 9)).grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
+        ttk.Entry(params_frame, textvariable=self.leverage_var, width=15).grid(row=2, column=1, sticky=tk.W, padx=5, pady=3)
         
         ttk.Label(options_frame, text="Output Format:", font=("Segoe UI", 9)).pack(anchor=tk.W, pady=5)
         ttk.Label(options_frame, text="✓ Excel with colored profit/loss", font=("Segoe UI", 9), foreground="#2ecc71").pack(anchor=tk.W, padx=20)
@@ -321,6 +347,13 @@ class CSVToExcelConverter:
             # Get last balance for Slado Akhir
             slado_akhir = closing_balance
             
+            # Add trading parameters to dataframe
+            df['Symbol'] = self.symbol_var.get()
+            df['Period'] = self.period_var.get()
+            df['Company'] = self.company_var.get()
+            df['Currency'] = self.currency_var.get()
+            df['Leverage'] = self.leverage_var.get()
+            
             # Market statistics
             market_stats = {}
             if COL_MARKET in df.columns:
@@ -352,6 +385,23 @@ class CSVToExcelConverter:
             gross_profit = win_trades[COL_PROFIT].sum()
             gross_loss = abs(loss_trades[COL_PROFIT].sum())
             profit_factor = gross_profit / gross_loss if gross_loss != 0 else 0
+            
+            # Calculate advanced metrics
+            net_profit = total_profit
+            return_percent = ((closing_balance - initial_balance) / initial_balance * 100) if initial_balance > 0 else 0
+            
+            # Drawdown calculations
+            cumulative_profit = df[COL_PROFIT].cumsum() + initial_balance
+            running_max = cumulative_profit.expanding().max()
+            drawdown_absolute = running_max - cumulative_profit
+            max_drawdown_absolute = drawdown_absolute.max()
+            max_drawdown_relative = (max_drawdown_absolute / running_max.max() * 100) if running_max.max() > 0 else 0
+            
+            # Recovery factor (Net Profit / Max Drawdown)
+            recovery_factor = net_profit / max_drawdown_absolute if max_drawdown_absolute > 0 else 0
+            
+            # AHPR (Average Holding Period Return)
+            ahpr = ((closing_balance / initial_balance) ** (1 / total_trades) - 1) * 100 if total_trades > 0 and initial_balance > 0 else 0
             
             self.add_log(f"✓ Total Trades: {total_trades}", "INFO")
             self.add_log(f"✓ Win Rate: {winrate:.1f}%", "INFO")
@@ -433,6 +483,80 @@ class CSVToExcelConverter:
             self.add_log("📤 Exporting to Excel...", "INFO")
             try:
                 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                    # Export detailed backtest statistics
+                    backtest_details = pd.DataFrame({
+                        "Category": [
+                            "Symbol",
+                            "Period",
+                            "Company",
+                            "Currency",
+                            "Leverage",
+                            "",
+                            "Initial Deposit",
+                            "Final Balance",
+                            "Net Profit",
+                            "Return %",
+                            "",
+                            "Total Trades",
+                            "Long Trades",
+                            "Short Trades",
+                            "Win Trades",
+                            "Loss Trades",
+                            "",
+                            "Win Rate %",
+                            "Avg Profit per Trade",
+                            "Max Profit",
+                            "Max Loss",
+                            "Gross Profit",
+                            "Gross Loss",
+                            "Profit Factor",
+                            "",
+                            "Max Drawdown Absolute",
+                            "Max Drawdown %",
+                            "Recovery Factor",
+                            "AHPR %",
+                            "",
+                            "Best Consecutive Wins",
+                            "Best Consecutive Losses",
+                        ],
+                        "Value": [
+                            self.symbol_var.get(),
+                            self.period_var.get(),
+                            self.company_var.get(),
+                            self.currency_var.get(),
+                            self.leverage_var.get(),
+                            "",
+                            round(initial_balance, 2),
+                            round(closing_balance, 2),
+                            round(net_profit, 2),
+                            round(return_percent, 2),
+                            "",
+                            total_trades,
+                            len(buy_df),
+                            len(sell_df),
+                            win_count,
+                            loss_count,
+                            "",
+                            round(winrate, 2),
+                            round(avg_profit, 2),
+                            round(max_profit, 2),
+                            round(max_loss, 2),
+                            round(gross_profit, 2),
+                            round(gross_loss, 2),
+                            round(profit_factor, 2),
+                            "",
+                            round(max_drawdown_absolute, 2),
+                            round(max_drawdown_relative, 2),
+                            round(recovery_factor, 2),
+                            round(ahpr, 2),
+                            "",
+                            "N/A",
+                            "N/A",
+                        ]
+                    })
+                    backtest_details.to_excel(writer, sheet_name="BACKTEST_DETAILS", index=False)
+                    self.add_log(f"  ✓ Exported BACKTEST_DETAILS sheet", "INFO")
+                    
                     df.to_excel(writer, sheet_name="ALL_TRADES", index=False)
                     self.add_log(f"  ✓ Exported ALL_TRADES sheet ({len(df)} rows)", "INFO")
                     
@@ -495,6 +619,16 @@ class CSVToExcelConverter:
                 if COL_PROFIT in header:
                     profit_col_letter = chr(header.index(COL_PROFIT) + 65)
                     format_profit_column(ws)
+            
+            # Format BACKTEST_DETAILS sheet
+            if "BACKTEST_DETAILS" in wb.sheetnames:
+                backtest_ws = wb["BACKTEST_DETAILS"]
+                for cell in backtest_ws[1]:
+                    cell.font = Font(bold=True)
+                
+                # Widen columns
+                backtest_ws.column_dimensions['A'].width = 30
+                backtest_ws.column_dimensions['B'].width = 20
             
             # Bold header summary
             summary_ws = wb["SUMMARY"]
@@ -721,8 +855,10 @@ class CSVToExcelConverter:
             all_trades_df = pd.read_excel(excel_file, sheet_name='ALL_TRADES')
             chart_images = self._generate_performance_charts(all_trades_df, output_folder)
             
-            # Generate PDF filename
+            # Generate PDF filename (remove _report suffix if present)
             pdf_basename = os.path.basename(os.path.splitext(excel_file)[0])
+            if pdf_basename.endswith('_report'):
+                pdf_basename = pdf_basename[:-7]  # Remove '_report'
             pdf_file = os.path.join(output_folder, pdf_basename + ".pdf")
             
             # Create PDF with larger page size for better column fitting
