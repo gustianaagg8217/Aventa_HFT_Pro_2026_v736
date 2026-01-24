@@ -853,8 +853,12 @@ class CSVToExcelConverter:
                         except Exception as e:
                             self.add_log(f"  ⚠️ Could not add chart image: {e}", "WARNING")
             
-            # Add sheets
+            # Add sheets (skip BACKTEST_DETAILS in PDF)
             for sheet_name in xls.sheet_names:
+                # Skip BACKTEST_DETAILS from PDF
+                if sheet_name == "BACKTEST_DETAILS":
+                    continue
+                
                 self.add_log(f"  📄 Processing sheet: {sheet_name}", "INFO")
                 
                 # Read sheet data
