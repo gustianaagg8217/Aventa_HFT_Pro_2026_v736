@@ -157,6 +157,36 @@ class SerialKeyGenerator:
         except Exception as e:
             print(f"Error validating serial: {e}")
             return False
+    
+    def _decode_metadata(self, metadata_seg: str) -> int:
+        """
+        Decode expiry_days from metadata segment in serial number
+        
+        Metadata segment format (position 3 in serial):
+        UUUU = unlimited (-1)
+        T7XX = trial (7 days)
+        DDXX = custom days (encoded in base-36)
+        
+        Returns expiry_days (-1 for unlimited, 7 for trial, N for custom)
+        """
+        try:
+            if not metadata_seg or len(metadata_seg) != 4:
+                return -1  # Default to unlimited if invalid
+            
+            if metadata_seg == "UUUU":
+                return -1  # Unlimited
+            elif metadata_seg == "T7XX":
+                return 7   # Trial (7 days)
+            elif metadata_seg.startswith("D"):
+                # Custom days - extract encoded number from base-36
+                encoded_days = metadata_seg[1:3]  # Characters 2-3 (e.g., "01", "0F", "1Z")
+                # Convert from base-36 to decimal
+                days = int(encoded_days, 36)
+                return days if days > 0 else -1
+            
+            return -1  # Default to unlimited if cannot decode
+        except:
+            return -1  # Default to unlimited on error
 
 
 class LicenseManager:
