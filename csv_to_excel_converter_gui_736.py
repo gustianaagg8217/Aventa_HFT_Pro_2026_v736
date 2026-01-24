@@ -33,13 +33,6 @@ class CSVToExcelConverter:
         self.output_folder_var = tk.StringVar(value="Backtest")
         self.is_converting = False
         
-        # Trading parameters
-        self.symbol_var = tk.StringVar(value="XAUUSD")
-        self.period_var = tk.StringVar(value="M15")
-        self.company_var = tk.StringVar(value="MetaTrader 5")
-        self.currency_var = tk.StringVar(value="USD")
-        self.leverage_var = tk.StringVar(value="1:500")
-        
         # Configure styles
         self.setup_styles()
         self.setup_ui()
@@ -98,33 +91,6 @@ class CSVToExcelConverter:
         
         ttk.Entry(output_input_frame, textvariable=self.output_folder_var, width=50).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         ttk.Button(output_input_frame, text="🔍 Browse", command=self.browse_output, width=12).pack(side=tk.LEFT)
-        
-        # === OPTIONS ===
-        options_frame = ttk.LabelFrame(main_frame, text="⚙️ Trading Parameters", padding="10")
-        options_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # Trading parameters grid
-        params_frame = ttk.Frame(options_frame)
-        params_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(params_frame, text="Symbol:", font=("Segoe UI", 9)).grid(row=0, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(params_frame, textvariable=self.symbol_var, width=15).grid(row=0, column=1, sticky=tk.W, padx=5, pady=3)
-        
-        ttk.Label(params_frame, text="Period:", font=("Segoe UI", 9)).grid(row=0, column=2, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(params_frame, textvariable=self.period_var, width=15).grid(row=0, column=3, sticky=tk.W, padx=5, pady=3)
-        
-        ttk.Label(params_frame, text="Company:", font=("Segoe UI", 9)).grid(row=1, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(params_frame, textvariable=self.company_var, width=15).grid(row=1, column=1, sticky=tk.W, padx=5, pady=3)
-        
-        ttk.Label(params_frame, text="Currency:", font=("Segoe UI", 9)).grid(row=1, column=2, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(params_frame, textvariable=self.currency_var, width=15).grid(row=1, column=3, sticky=tk.W, padx=5, pady=3)
-        
-        ttk.Label(params_frame, text="Leverage:", font=("Segoe UI", 9)).grid(row=2, column=0, sticky=tk.W, padx=5, pady=3)
-        ttk.Entry(params_frame, textvariable=self.leverage_var, width=15).grid(row=2, column=1, sticky=tk.W, padx=5, pady=3)
-        
-        ttk.Label(options_frame, text="Output Format:", font=("Segoe UI", 9)).pack(anchor=tk.W, pady=5)
-        ttk.Label(options_frame, text="✓ Excel with colored profit/loss", font=("Segoe UI", 9), foreground="#2ecc71").pack(anchor=tk.W, padx=20)
-        ttk.Label(options_frame, text="✓ Separate sheets: ALL_TRADES, BUY_TRADES, SELL_TRADES, SUMMARY", font=("Segoe UI", 9), foreground="#2ecc71").pack(anchor=tk.W, padx=20)
         
         # === CONTROL BUTTONS ===
         button_frame = ttk.Frame(main_frame)
@@ -253,7 +219,7 @@ class CSVToExcelConverter:
         self.output_folder_var.set("Backtest")
         self.log_text.delete(1.0, tk.END)
         self.status_var.set("Ready")
-        self.add_log("Fields cleared", "INFO")
+        self.add_log("Fields cleared", "INFO"
     
     def add_log(self, message, level="INFO"):
         """Add message to log"""
@@ -346,13 +312,6 @@ class CSVToExcelConverter:
             
             # Get last balance for Slado Akhir
             slado_akhir = closing_balance
-            
-            # Add trading parameters to dataframe
-            df['Symbol'] = self.symbol_var.get()
-            df['Period'] = self.period_var.get()
-            df['Company'] = self.company_var.get()
-            df['Currency'] = self.currency_var.get()
-            df['Leverage'] = self.leverage_var.get()
             
             # Market statistics
             market_stats = {}
@@ -638,6 +597,13 @@ class CSVToExcelConverter:
             wb.save(output_file)
             self.add_log(f"  ✓ Excel formatting applied", "INFO")
             
+            # Verify file was created
+            if os.path.exists(output_file):
+                file_size = os.path.getsize(output_file)
+                self.add_log(f"✓ Excel file created: {file_size:,} bytes", "SUCCESS")
+            else:
+                raise FileNotFoundError(f"Excel file was not created at: {output_file}")
+            
             self.add_log("=" * 60, "SUCCESS")
             self.add_log(f"✅ Conversion completed successfully!", "SUCCESS")
             self.add_log(f"📊 Output file: {output_file}", "SUCCESS")
@@ -669,7 +635,13 @@ class CSVToExcelConverter:
         excel_file = os.path.join(output_folder, input_basename + "_report.xlsx")
         
         if not os.path.exists(excel_file):
-            messagebox.showerror("Error", f"Excel file not found: {excel_file}\n\nPlease convert to Excel first!")
+            messagebox.showerror("Error", 
+                f"Excel file not found:\n\n{excel_file}\n\n" +
+                f"Please:\n" +
+                f"1. Make sure you clicked 'Convert to Excel' FIRST\n" +
+                f"2. Check that output folder is correct\n" +
+                f"3. Verify Excel file was created successfully")
+            self.add_log(f"✗ PDF conversion failed: Excel file not found at {excel_file}", "ERROR")
             return
         
         if FPDF is None:

@@ -2710,11 +2710,19 @@ class HFTProGUI:
 
                 ttk.Label(settings_row, text="Symbol:", font=('Segoe UI', 10)).pack(side=tk.LEFT, padx=5)
                 self.bt_symbol_var = tk.StringVar(value="GOLD")
-                ttk.Entry(settings_row, textvariable=self.bt_symbol_var, width=15).pack(side=tk.LEFT, padx=5)
+                ttk.Entry(settings_row, textvariable=self.bt_symbol_var, width=12).pack(side=tk.LEFT, padx=5)
 
-                ttk.Label(settings_row, text="Initial Balance ($):", font=('Segoe UI', 10)).pack(side=tk.LEFT, padx=(20, 5))
+                ttk.Label(settings_row, text="Timeframe:", font=('Segoe UI', 10)).pack(side=tk.LEFT, padx=(20, 5))
+                self.bt_timeframe_var = tk.StringVar(value="M5")
+                ttk.Entry(settings_row, textvariable=self.bt_timeframe_var, width=12).pack(side=tk.LEFT, padx=5)
+
+                ttk.Label(settings_row, text="Company:", font=('Segoe UI', 10)).pack(side=tk.LEFT, padx=(20, 5))
+                self.bt_company_var = tk.StringVar(value="MetaTrader 5")
+                ttk.Entry(settings_row, textvariable=self.bt_company_var, width=15).pack(side=tk.LEFT, padx=5)
+
+                ttk.Label(settings_row, text="Balance ($):", font=('Segoe UI', 10)).pack(side=tk.LEFT, padx=(20, 5))
                 self.bt_balance_var = tk.StringVar(value="1000")
-                ttk.Entry(settings_row, textvariable=self.bt_balance_var, width=15).pack(side=tk.LEFT, padx=5)
+                ttk.Entry(settings_row, textvariable=self.bt_balance_var, width=12).pack(side=tk.LEFT, padx=5)
 
                 # Row 3: Config Source
                 config_row = ttk.Frame(config_frame)
@@ -3284,7 +3292,8 @@ class HFTProGUI:
                         
                         # Header
                         writer.writerow(['#', 'Entry Time', 'Exit Time', 'Type', 'Entry Price', 
-                                    'Exit Price', 'Volume', 'Profit', 'Saldo Awal', 'Saldo Akhir', 'Duration', 'Reason'])
+                                    'Exit Price', 'Volume', 'Profit', 'Saldo Awal', 'Saldo Akhir', 'Duration', 'Reason', 
+                                    'Symbol', 'Period', 'Company'])
                         
                         # Calculate running balance
                         running_balance = initial_balance
@@ -3305,6 +3314,11 @@ class HFTProGUI:
                             saldo_akhir = running_balance + profit
                             running_balance = saldo_akhir
                             
+                            # Get trading parameters
+                            symbol = self.bt_symbol_var.get() if hasattr(self, 'bt_symbol_var') else 'Unknown'
+                            period = self.bt_timeframe_var.get() if hasattr(self, 'bt_timeframe_var') else 'Unknown'
+                            company = self.bt_company_var.get() if hasattr(self, 'bt_company_var') else 'Unknown'
+                            
                             writer.writerow([
                                 i,
                                 entry_time,
@@ -3317,7 +3331,10 @@ class HFTProGUI:
                                 f"{saldo_awal:.2f}",
                                 f"{saldo_akhir:.2f}",
                                 trade.get('duration', ''),
-                                trade.get('reason', '')
+                                trade.get('reason', ''),
+                                symbol,
+                                period,
+                                company
                             ])
                     
                     self.add_bt_log(f"✓ Trades exported to: {filename}", "SUCCESS")
