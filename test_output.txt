@@ -1,0 +1,11 @@
+c:\Users\LENOVO THINKPAD\Documents\Aventa_AI_2026\Aventa_HFT_Pro_2026_v736\csv_to_excel_converter_gui_736.py:774: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout()
+c:\Users\LENOVO THINKPAD\Documents\Aventa_AI_2026\Aventa_HFT_Pro_2026_v736\csv_to_excel_converter_gui_736.py:803: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+  plt.tight_layout()
+[TEST] Testing converter dengan trades_20260124_121916.csv
+============================================================
+[RUN] Starting conversion...
+[13:43:27] ============================================================
+[13:43:27] ============================================================
+
+[SUCCESS] trades_20260124_121916_report.xlsx (323.5 KB)

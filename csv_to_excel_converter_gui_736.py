@@ -508,6 +508,8 @@ class CSVToExcelConverter:
                 self.add_log(f"  ✓ Workbook saved", "INFO")
                 
             except Exception as e:
+                self.add_log(f"✗ Export failed: {str(e)}", "ERROR")
+                raise
             
             # Add charts sheet if images exist (after initial export)
             if chart_images:
