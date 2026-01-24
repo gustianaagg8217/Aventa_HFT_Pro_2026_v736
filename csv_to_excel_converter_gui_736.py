@@ -219,7 +219,7 @@ class CSVToExcelConverter:
         self.output_folder_var.set("Backtest")
         self.log_text.delete(1.0, tk.END)
         self.status_var.set("Ready")
-        self.add_log("Fields cleared", "INFO"
+        self.add_log("Fields cleared", "INFO")
     
     def add_log(self, message, level="INFO"):
         """Add message to log"""
@@ -438,112 +438,111 @@ class CSVToExcelConverter:
                 market_df = pd.DataFrame(market_rows)
                 summary_df = pd.concat([summary_df, market_df], ignore_index=True)
             
-            # Export to Excel
+            # Export to Excel - use openpyxl directly to avoid pandas issues
             self.add_log("📤 Exporting to Excel...", "INFO")
             try:
-                with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-                    # Export detailed backtest statistics
-                    backtest_details = pd.DataFrame({
-                        "Category": [
-                            "Symbol",
-                            "Period",
-                            "Company",
-                            "Currency",
-                            "Leverage",
-                            "",
-                            "Initial Deposit",
-                            "Final Balance",
-                            "Net Profit",
-                            "Return %",
-                            "",
-                            "Total Trades",
-                            "Long Trades",
-                            "Short Trades",
-                            "Win Trades",
-                            "Loss Trades",
-                            "",
-                            "Win Rate %",
-                            "Avg Profit per Trade",
-                            "Max Profit",
-                            "Max Loss",
-                            "Gross Profit",
-                            "Gross Loss",
-                            "Profit Factor",
-                            "",
-                            "Max Drawdown Absolute",
-                            "Max Drawdown %",
-                            "Recovery Factor",
-                            "AHPR %",
-                            "",
-                            "Best Consecutive Wins",
-                            "Best Consecutive Losses",
-                        ],
-                        "Value": [
-                            self.symbol_var.get(),
-                            self.period_var.get(),
-                            self.company_var.get(),
-                            self.currency_var.get(),
-                            self.leverage_var.get(),
-                            "",
-                            round(initial_balance, 2),
-                            round(closing_balance, 2),
-                            round(net_profit, 2),
-                            round(return_percent, 2),
-                            "",
-                            total_trades,
-                            len(buy_df),
-                            len(sell_df),
-                            win_count,
-                            loss_count,
-                            "",
-                            round(winrate, 2),
-                            round(avg_profit, 2),
-                            round(max_profit, 2),
-                            round(max_loss, 2),
-                            round(gross_profit, 2),
-                            round(gross_loss, 2),
-                            round(profit_factor, 2),
-                            "",
-                            round(max_drawdown_absolute, 2),
-                            round(max_drawdown_relative, 2),
-                            round(recovery_factor, 2),
-                            round(ahpr, 2),
-                            "",
-                            "N/A",
-                            "N/A",
-                        ]
-                    })
-                    backtest_details.to_excel(writer, sheet_name="BACKTEST_DETAILS", index=False)
-                    self.add_log(f"  ✓ Exported BACKTEST_DETAILS sheet", "INFO")
-                    
-                    df.to_excel(writer, sheet_name="ALL_TRADES", index=False)
-                    self.add_log(f"  ✓ Exported ALL_TRADES sheet ({len(df)} rows)", "INFO")
-                    
-                    buy_df.to_excel(writer, sheet_name="BUY_TRADES", index=False)
-                    self.add_log(f"  ✓ Exported BUY_TRADES sheet ({len(buy_df)} rows)", "INFO")
-                    
-                    sell_df.to_excel(writer, sheet_name="SELL_TRADES", index=False)
-                    self.add_log(f"  ✓ Exported SELL_TRADES sheet ({len(sell_df)} rows)", "INFO")
-                    
-                    summary_df.to_excel(writer, sheet_name="SUMMARY", index=False)
-                    self.add_log(f"  ✓ Exported SUMMARY sheet", "INFO")
-            except PermissionError:
-                self.add_log(f"⚠️ Permission denied - Close the file if it's open in Excel and try again", "WARNING")
-                raise
+                from openpyxl import Workbook
+                from openpyxl.styles import Font, PatternFill
+                
+                # Extract trading info
+                symbol = df['Symbol'].iloc[0] if 'Symbol' in df.columns and len(df) > 0 else 'Unknown'
+                period = df['Period'].iloc[0] if 'Period' in df.columns and len(df) > 0 else 'Unknown'
+                company = df['Company'].iloc[0] if 'Company' in df.columns and len(df) > 0 else 'Unknown'
+                currency = getattr(self, 'currency_var', None)
+                currency = currency.get() if currency else 'USD'
+                leverage = getattr(self, 'leverage_var', None)
+                leverage = leverage.get() if leverage else '1:1'
+                
+                # Create workbook
+                wb = Workbook()
+                wb.remove(wb.active)
+                
+                # Write BACKTEST_DETAILS sheet
+                backtest_details = pd.DataFrame({
+                    "Category": ["Symbol", "Period", "Company", "Currency", "Leverage", "",
+                                "Initial Deposit", "Final Balance", "Net Profit", "Return %", "",
+                                "Total Trades", "Long Trades", "Short Trades", "Win Trades", "Loss Trades", "",
+                                "Win Rate %", "Avg Profit per Trade", "Max Profit", "Max Loss",
+                                "Gross Profit", "Gross Loss", "Profit Factor", "",
+                                "Max Drawdown Absolute", "Max Drawdown %", "Recovery Factor", "AHPR %", "",
+                                "Best Consecutive Wins", "Best Consecutive Losses"],
+                    "Value": [symbol, period, company,
+                             currency, leverage, "",
+                             round(initial_balance, 2), round(closing_balance, 2), round(net_profit, 2),
+                             round(return_percent, 2), "",
+                             total_trades, len(buy_df), len(sell_df), win_count, loss_count, "",
+                             round(winrate, 2), round(avg_profit, 2), round(max_profit, 2), round(max_loss, 2),
+                             round(gross_profit, 2), round(gross_loss, 2), round(profit_factor, 2), "",
+                             round(max_drawdown_absolute, 2), round(max_drawdown_relative, 2),
+                             round(recovery_factor, 2), round(ahpr, 2), "", "N/A", "N/A"]
+                })
+                
+                # Helper function to write DataFrame
+                def write_dataframe_to_sheet(wb, df, sheet_name):
+                    ws = wb.create_sheet(sheet_name)
+                    for col_idx, col_name in enumerate(df.columns, 1):
+                        ws.cell(row=1, column=col_idx, value=col_name)
+                    for row_idx, row_data in enumerate(df.values, 2):
+                        for col_idx, value in enumerate(row_data, 1):
+                            ws.cell(row=row_idx, column=col_idx, value=value)
+                    return ws
+                
+                # Write all sheets
+                write_dataframe_to_sheet(wb, backtest_details, "BACKTEST_DETAILS")
+                self.add_log(f"  ✓ BACKTEST_DETAILS", "INFO")
+                
+                write_dataframe_to_sheet(wb, df, "ALL_TRADES")
+                self.add_log(f"  ✓ ALL_TRADES ({len(df)} trades)", "INFO")
+                
+                write_dataframe_to_sheet(wb, buy_df, "BUY_TRADES")
+                self.add_log(f"  ✓ BUY_TRADES ({len(buy_df)} trades)", "INFO")
+                
+                write_dataframe_to_sheet(wb, sell_df, "SELL_TRADES")
+                self.add_log(f"  ✓ SELL_TRADES ({len(sell_df)} trades)", "INFO")
+                
+                write_dataframe_to_sheet(wb, summary_df, "SUMMARY")
+                self.add_log(f"  ✓ SUMMARY", "INFO")
+                
+                # Save workbook
+                wb.save(output_file)
+                self.add_log(f"  ✓ Workbook saved", "INFO")
+                
+            except Exception as e:
             
             # Add charts sheet if images exist (after initial export)
             if chart_images:
                 try:
                     wb = load_workbook(output_file)
+                    
+                    # Ensure all sheets are visible before adding charts
+                    for sheet_name in wb.sheetnames:
+                        wb[sheet_name].sheet_state = 'visible'
+                    
                     for chart_image in chart_images:
                         if os.path.exists(chart_image):
-                            worksheet = wb.create_sheet("CHARTS", 0)
+                            # Create charts sheet if not exists
+                            if "CHARTS" not in wb.sheetnames:
+                                worksheet = wb.create_sheet("CHARTS", 0)
+                            else:
+                                worksheet = wb["CHARTS"]
+                            
+                            worksheet.sheet_state = 'visible'
                             img = XLImage(chart_image)
                             img.width = 800
                             img.height = 600
                             worksheet.add_image(img, 'A1')
                             self.add_log(f"  ✓ Added charts sheet", "INFO")
                             break
+                    
+                    # Ensure ALL sheets are visible after chart operations
+                    for sheet_name in wb.sheetnames:
+                        wb[sheet_name].sheet_state = 'visible'
+                    
+                    # Final safety: ensure at least one visible sheet
+                    visible_sheets = [name for name in wb.sheetnames if wb[name].sheet_state == 'visible']
+                    if not visible_sheets and wb.sheetnames:
+                        wb[wb.sheetnames[0]].sheet_state = 'visible'
+                    
                     wb.save(output_file)
                 except PermissionError:
                     self.add_log(f"⚠️ Could not add charts - file may be open in Excel", "WARNING")
