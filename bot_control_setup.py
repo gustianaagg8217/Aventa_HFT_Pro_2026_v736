@@ -63,7 +63,7 @@ def setup_telegram_control():
     print("="*60 + "\n")
     
     print("📋 Configuration Summary:\n")
-    print("Token        : 8531073542:AAENQ-O9fnaHpFCvBB11xxa9vWq5aT22hLA")
+    print("Token        : 8ohjhjhjhjhjgghghghgh")
     print("Bot Name     : Aventa HFT Pro 2026 v735")
     print("IPC Location : .ipc/")
     print()
